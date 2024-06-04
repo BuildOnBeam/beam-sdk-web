@@ -1,2 +1,6 @@
 node_modules
 dist
+
+# Ignore generated files
+src/lib/api/*.generated.ts
+src/lib/api/*.generated
