@@ -58,10 +58,14 @@ export class BeamClient {
     let sessionRequest;
 
     try {
-      sessionRequest = await this.#api.createSessionRequest(entityId, {
-        chainId,
-        address: key,
-      });
+      sessionRequest = await this.#api.createSessionRequest(
+        entityId,
+        {
+          chainId,
+          address: key,
+        },
+        this.getApiRequestConfig()
+      );
     } catch (error: unknown) {
       this.log(
         `Failed to create session request: ${
