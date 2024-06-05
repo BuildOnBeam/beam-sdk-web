@@ -15,7 +15,7 @@ const config: ReturnType<typeof defineConfig> = defineConfig({
       indexFiles: true,
     },
     input: {
-      target: "https://api.preview.onbeam.com/api/self-custody-json",
+      target: "https://api.preview.onbeam.com/api/player-json",
       parserOptions: {
         resolve: {
           http: {
