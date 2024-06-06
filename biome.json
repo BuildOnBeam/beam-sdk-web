@@ -30,7 +30,6 @@
       },
       "suspicious": {
         "noExplicitAny": "off",
-        "noImplicitAnyLet": "off",
         "noRedeclare": "off",
         "noConsoleLog": "error"
       },

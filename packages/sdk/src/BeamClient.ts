@@ -1,4 +1,5 @@
 import { getBeamSelfCustodyAPI } from 'lib/api/beam.api.generated';
+import { GenerateSessionRequestResponse } from 'lib/api/beam.types.generated';
 import { BeamConfiguration } from 'lib/config';
 import { ConfirmationScreen } from 'lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from 'lib/storage';
@@ -55,7 +56,7 @@ export class BeamClient {
 
     key = this.getOrCreateSigningKey(true);
 
-    let sessionRequest;
+    let sessionRequest: GenerateSessionRequestResponse | null = null;
 
     try {
       sessionRequest = await this.#api.createSessionRequest(
@@ -82,7 +83,7 @@ export class BeamClient {
 
     this.log(`Created session request: ${sessionRequest.id}`);
 
-    let error;
+    let error: string | null = null;
 
     try {
       this.log(`Confirming session request: ${sessionRequest.id}`);
