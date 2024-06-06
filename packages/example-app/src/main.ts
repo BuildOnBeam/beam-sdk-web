@@ -22,6 +22,9 @@ document.querySelector<HTMLDivElement>('#root')!.innerHTML = `
     <div class="card">
       <button id="createSessionButton" type="button">Create a session</button>
     </div>
+
+    <div id="session-details"></div>
+
     <p class="read-the-docs">
       Click on the Beam logo to learn more
     </p>
@@ -32,7 +35,15 @@ document
   .querySelector<HTMLButtonElement>('#createSessionButton')!
   .addEventListener('click', async () => {
     try {
-      await client.createSession(entityId, 13337);
+      const session = await client.createSession(entityId, 13337);
+
+      if (session) {
+        document.querySelector<HTMLDivElement>('#session-details')!.innerHTML =
+          `
+          <p>Session ID: ${session.id}</p>
+          <p>Session Address: ${session.sessionAddress}</p>
+        `;
+      }
     } catch (error) {
       console.error(error);
     }

@@ -84,6 +84,53 @@ export default class ConfirmationScreen {
     });
   }
 
+  signOperation(url: string): Promise<ConfirmationResult> {
+    return new Promise((resolve, reject) => {
+      const messageHandler = ({ data, origin }: MessageEvent) => {
+        if (
+          origin !== this.config.authUrl ||
+          data.eventType !== BEAM_EVENT_TYPE
+        ) {
+          return;
+        }
+
+        switch (data.messageType as ReceiveMessage) {
+          case ReceiveMessage.CONFIRMATION_WINDOW_READY: {
+            this.confirmationWindow?.postMessage(
+              {
+                eventType: BEAM_EVENT_TYPE,
+                messageType: SendMessage.SIGN_OPERATION_START,
+                url,
+              },
+              this.config.authUrl,
+            );
+            break;
+          }
+          case ReceiveMessage.SIGN_OPERATION_CONFIRMED: {
+            this.closeWindow();
+            resolve({ confirmed: true });
+            break;
+          }
+          case ReceiveMessage.SIGN_OPERATION_ERROR: {
+            this.closeWindow();
+            reject(new Error('Error during operation signing'));
+            break;
+          }
+          case ReceiveMessage.SIGN_OPERATION_REJECTED: {
+            this.closeWindow();
+            reject(new Error('User rejected operation signing'));
+            break;
+          }
+          default:
+            this.closeWindow();
+            reject(new Error('Unsupported message type'));
+        }
+      };
+      window.addEventListener('message', messageHandler);
+      this.showConfirmationScreen(url, messageHandler, resolve);
+    });
+  }
+
   //   loading(popupOptions?: { width: number; height: number }) {
   //     this.popupOptions = popupOptions;
 

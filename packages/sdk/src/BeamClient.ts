@@ -1,11 +1,14 @@
 import { getPlayerAPI } from './lib/api/beam.api.generated';
-import { GenerateSessionRequestResponse } from './lib/api/beam.types.generated';
+import {
+  CommonOperationResponse,
+  GenerateSessionRequestResponse,
+} from './lib/api/beam.types.generated';
 import { BeamConfiguration } from './lib/config';
 import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { ClientConfig, Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
-import { generatePrivateKey } from 'viem/accounts';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 
 export class BeamClient {
   readonly #api = getPlayerAPI();
@@ -26,6 +29,13 @@ export class BeamClient {
     this.#storage = new StorageService<StorageKeys>(storage);
   }
 
+  /**
+   * Get the active session. If there is no active session, it will throw an error.
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Session
+   */
   public async getActiveSession(entityId: string, chainId: number) {
     const { session } = await this.getActiveSessionAndKeys(entityId, chainId);
 
@@ -40,6 +50,13 @@ export class BeamClient {
     return session;
   }
 
+  /**
+   * Create a new session. If there is an active session, it will throw an error.
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Session
+   */
   public async createSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
       entityId,
@@ -59,11 +76,13 @@ export class BeamClient {
     let sessionRequest: GenerateSessionRequestResponse | null = null;
 
     try {
+      const account = privateKeyToAccount(key as `0x${string}`);
+
       sessionRequest = await this.#api.createSessionRequest(
         entityId,
         {
           chainId,
-          address: key,
+          address: account.address,
         },
         this.getApiRequestConfig(),
       );
@@ -92,6 +111,8 @@ export class BeamClient {
 
       const result = await this.#confirm.requestSession(sessionRequest.url);
 
+      this.log(`Session request confirmed: ${result.confirmed}`);
+
       if (!result.confirmed) {
         throw new Error('Unable to confirm session request');
       }
@@ -110,13 +131,97 @@ export class BeamClient {
     return this.getActiveSession(entityId, chainId);
   }
 
-  public async signOperation(_entityId: string, _operationId: string) {
-    // get or create session
+  /**
+   * Sign an operation by id
+   * @param entityId
+   * @param operationId
+   * @param chainId
+   * @returns boolean
+   */
+  public async signOperation(
+    entityId: string,
+    operationId: string,
+    chainId: number,
+  ) {
+    const { session, key } = await this.getActiveSessionAndKeys(
+      entityId,
+      chainId,
+    );
+
+    this.log('Retrieving operation');
+
+    let operation: CommonOperationResponse | null = null;
+
+    try {
+      const result = await this.#api.getOperation(
+        operationId,
+        this.getApiRequestConfig(),
+      );
+
+      if (result) operation = result;
+    } catch (error: unknown) {
+      this.log(
+        `Failed to get operation: ${
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!operation) {
+      this.log('Failed to get operation');
+
+      throw new Error('Failed to get operation');
+    }
+
+    if (session && key) {
+      //   return this.signOperationUsingSession(operation, session, key);
+    }
+
+    return this.signOperationUsingBrowser(operation);
   }
 
-  private async signOperationUsingSession() {}
-  private async signOperationUsingBrowser() {}
+  // private async signOperationUsingSession(
+  //   operation: CommonOperationResponse,
+  //   session: Session,
+  //   key: string,
+  // ) {}
 
+  private async signOperationUsingBrowser(operation: CommonOperationResponse) {
+    let error: string | null = null;
+
+    try {
+      this.log(`Signing operation using browser: ${operation.id}`);
+
+      // TODO add timeout
+
+      const result = await this.#confirm.signOperation(operation.url);
+
+      this.log(`Operation signed: ${result.confirmed}`);
+
+      if (!result.confirmed) {
+        throw new Error('Unable to sign operation');
+      }
+    } catch (err: unknown) {
+      this.log(
+        `Failed to sign operation: ${
+          err instanceof Error ? err.message : 'Unknown error.'
+        }`,
+      );
+
+      error = err instanceof Error ? err.message : 'Unknown error.';
+    }
+
+    if (error) throw new Error(error);
+
+    return true;
+  }
+
+  /**
+   * Get active session and keys. If a session is not valid, it will try to get a new one. If that fails, only a key will be returned.
+   * @param entityId
+   * @param chainId
+   * @returns
+   */
   private async getActiveSessionAndKeys(entityId: string, chainId: number) {
     let session: Session | null = null;
 
@@ -129,10 +234,12 @@ export class BeamClient {
     const key = this.getOrCreateSigningKey();
 
     if (!isSessionValid(session)) {
+      const account = privateKeyToAccount(key as `0x${string}`);
+
       try {
         const result = await this.#api.getActiveSession(
           entityId,
-          key, // NOTE this is the private key, is this correct?
+          account.address,
           {
             chainId,
           },
@@ -160,6 +267,11 @@ export class BeamClient {
     return { session: null, key };
   }
 
+  /**
+   * Get or create a signing key
+   * @param refresh
+   * @returns
+   */
   private getOrCreateSigningKey(refresh = false) {
     if (!refresh) {
       const stored = this.#storage.get(StorageKey.SIGNING_KEY);
