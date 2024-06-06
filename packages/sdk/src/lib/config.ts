@@ -1,4 +1,4 @@
-import { ClientConfig, Environment } from 'types';
+import { ClientConfig, Environment } from '../types';
 
 export class BeamConfiguration {
   public environment: Environment;

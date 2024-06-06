@@ -1,14 +1,14 @@
-import { getBeamSelfCustodyAPI } from 'lib/api/beam.api.generated';
-import { GenerateSessionRequestResponse } from 'lib/api/beam.types.generated';
-import { BeamConfiguration } from 'lib/config';
-import { ConfirmationScreen } from 'lib/confirmation';
-import { StorageKey, StorageKeys, StorageService } from 'lib/storage';
-import { ClientConfig, Session } from 'types';
-import { isSessionOwnedBy, isSessionValid } from 'utils';
+import { getPlayerAPI } from './lib/api/beam.api.generated';
+import { GenerateSessionRequestResponse } from './lib/api/beam.types.generated';
+import { BeamConfiguration } from './lib/config';
+import { ConfirmationScreen } from './lib/confirmation';
+import { StorageKey, StorageKeys, StorageService } from './lib/storage';
+import { ClientConfig, Session } from './types';
+import { isSessionOwnedBy, isSessionValid } from './utils';
 import { generatePrivateKey } from 'viem/accounts';
 
 export class BeamClient {
-  readonly #api = getBeamSelfCustodyAPI();
+  readonly #api = getPlayerAPI();
 
   readonly #config: BeamConfiguration;
 
@@ -129,16 +129,24 @@ export class BeamClient {
     const key = this.getOrCreateSigningKey();
 
     if (!isSessionValid(session)) {
-      const result = await this.#api.getActiveSession(
-        entityId,
-        key, // NOTE this is the private key, is this correct?
-        {
-          chainId,
-        },
-        this.getApiRequestConfig(),
-      );
+      try {
+        const result = await this.#api.getActiveSession(
+          entityId,
+          key, // NOTE this is the private key, is this correct?
+          {
+            chainId,
+          },
+          this.getApiRequestConfig(),
+        );
 
-      if (result) session = result as unknown as Session;
+        if (result) session = result as unknown as Session;
+      } catch (error: unknown) {
+        this.log(
+          `Failed to get active session: ${
+            error instanceof Error ? error.message : 'Unknown error.'
+          }`,
+        );
+      }
     }
 
     if (isSessionValid(session) && isSessionOwnedBy(session, key)) {

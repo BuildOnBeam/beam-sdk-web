@@ -1,4 +1,4 @@
-import { Session } from 'types';
+import { Session } from './types';
 
 export const isSessionValid = (session: Session | null): boolean => {
   if (!session || !session.isActive) return false;
