@@ -117,7 +117,7 @@ export class BeamClient {
   private async signOperationUsingBrowser() {}
 
   private async getActiveSessionAndKeys(entityId: string, chainId: number) {
-    let session = null;
+    let session: Session | null = null;
 
     const sessionInfo = this.#storage.get(StorageKey.SESSION);
 
@@ -176,7 +176,10 @@ export class BeamClient {
     };
   }
 
-  private log(_message: string) {
+  private log(message: string) {
     if (!this.#config.debug) return;
+
+    // biome-ignore lint/suspicious/noConsoleLog: allowed for debugging
+    console.log(message);
   }
 }
