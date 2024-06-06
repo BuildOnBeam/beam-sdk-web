@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
-import { glob } from "glob";
+import * as fs from 'node:fs';
+import { glob } from 'glob';
 
 type Options = {
   target: string;
@@ -10,7 +10,7 @@ type Options = {
 };
 
 function findAndReplace({ target, jobs }: Options) {
-  return fs.readFile(target, "utf8", async (err, data) => {
+  return fs.readFile(target, 'utf8', async (err, data) => {
     if (err) return console.error(err);
 
     let formatted = data;
@@ -18,7 +18,7 @@ function findAndReplace({ target, jobs }: Options) {
       formatted = formatted.replaceAll(pattern, replace);
     }
 
-    fs.writeFile(target, formatted, "utf8", (err) => {
+    fs.writeFile(target, formatted, 'utf8', (err) => {
       if (err) return console.error(err);
     });
   });
@@ -34,7 +34,7 @@ async function search(options: Options) {
 
 async function main() {
   await search({
-    target: "./src/lib/api/beam.api.generated.ts",
+    target: './src/lib/api/beam.api.generated.ts',
     jobs: [
       {
         pattern: "from './'",
@@ -46,4 +46,4 @@ async function main() {
 
 main();
 
-console.info("Finished orval.cleanup.ts!");
+console.info('Finished orval.cleanup.ts!');

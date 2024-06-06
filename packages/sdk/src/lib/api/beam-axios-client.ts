@@ -1,11 +1,11 @@
-import Axios, { type AxiosError, type AxiosRequestConfig } from "axios";
+import Axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
 
 export const AXIOS_INSTANCE = Axios.create(); // use your own URL here or environment variable
 
 // add a second `options` argument here if you want to pass extra options to each generated query
 export const client = <T>(
   config: AxiosRequestConfig,
-  options?: AxiosRequestConfig
+  options?: AxiosRequestConfig,
 ): Promise<T> => {
   const source = Axios.CancelToken.source();
   const promise = AXIOS_INSTANCE({
@@ -16,7 +16,7 @@ export const client = <T>(
 
   // @ts-ignore
   promise.cancel = () => {
-    source.cancel("Query was cancelled");
+    source.cancel('Query was cancelled');
   };
 
   return promise;

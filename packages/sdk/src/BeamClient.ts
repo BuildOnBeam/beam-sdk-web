@@ -1,10 +1,10 @@
-import { getBeamSelfCustodyAPI } from "lib/api/beam.api.generated";
-import { BeamConfiguration } from "lib/config";
-import { ConfirmationScreen } from "lib/confirmation";
-import { StorageKey, StorageKeys, StorageService } from "lib/storage";
-import { ClientConfig, Session } from "types";
-import { isSessionOwnedBy, isSessionValid } from "utils";
-import { generatePrivateKey } from "viem/accounts";
+import { getBeamSelfCustodyAPI } from 'lib/api/beam.api.generated';
+import { BeamConfiguration } from 'lib/config';
+import { ConfirmationScreen } from 'lib/confirmation';
+import { StorageKey, StorageKeys, StorageService } from 'lib/storage';
+import { ClientConfig, Session } from 'types';
+import { isSessionOwnedBy, isSessionValid } from 'utils';
+import { generatePrivateKey } from 'viem/accounts';
 
 export class BeamClient {
   readonly #api = getBeamSelfCustodyAPI();
@@ -26,15 +26,15 @@ export class BeamClient {
   }
 
   public async getActiveSession(entityId: string, chainId: number) {
-    let { session } = await this.getActiveSessionAndKeys(entityId, chainId);
+    const { session } = await this.getActiveSessionAndKeys(entityId, chainId);
 
     if (!session) {
-      this.log("Unable to get active session");
+      this.log('Unable to get active session');
 
-      throw new Error("No active session found");
+      throw new Error('No active session found');
     }
 
-    this.log("Got active session");
+    this.log('Got active session');
 
     return session;
   }
@@ -42,16 +42,16 @@ export class BeamClient {
   public async createSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
       entityId,
-      chainId
+      chainId,
     );
 
     if (session) {
-      this.log("Already has an active session, ending early");
+      this.log('Already has an active session, ending early');
 
-      throw new Error("Already has an active session");
+      throw new Error('Already has an active session');
     }
 
-    this.log("Creating a new session");
+    this.log('Creating a new session');
 
     key = this.getOrCreateSigningKey(true);
 
@@ -64,20 +64,20 @@ export class BeamClient {
           chainId,
           address: key,
         },
-        this.getApiRequestConfig()
+        this.getApiRequestConfig(),
       );
     } catch (error: unknown) {
       this.log(
         `Failed to create session request: ${
-          error instanceof Error ? error.message : "Unknown error."
-        }`
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
       );
     }
 
     if (!sessionRequest) {
-      this.log("Failed to create session request");
+      this.log('Failed to create session request');
 
-      throw new Error("Failed to create session request");
+      throw new Error('Failed to create session request');
     }
 
     this.log(`Created session request: ${sessionRequest.id}`);
@@ -92,16 +92,16 @@ export class BeamClient {
       const result = await this.#confirm.requestSession(sessionRequest.url);
 
       if (!result.confirmed) {
-        throw new Error("Unable to confirm session request");
+        throw new Error('Unable to confirm session request');
       }
     } catch (err: unknown) {
       this.log(
         `Failed to confirm session request: ${
-          err instanceof Error ? err.message : "Unknown error."
-        }`
+          err instanceof Error ? err.message : 'Unknown error.'
+        }`,
       );
 
-      error = err instanceof Error ? err.message : "Unknown error.";
+      error = err instanceof Error ? err.message : 'Unknown error.';
     }
 
     if (error) throw new Error(error);
@@ -109,7 +109,7 @@ export class BeamClient {
     return this.getActiveSession(entityId, chainId);
   }
 
-  public async signOperation(entityId: string, operationId: string) {
+  public async signOperation(_entityId: string, _operationId: string) {
     // get or create session
   }
 
@@ -134,7 +134,7 @@ export class BeamClient {
         {
           chainId,
         },
-        this.getApiRequestConfig()
+        this.getApiRequestConfig(),
       );
 
       if (result) session = result as unknown as Session;
@@ -165,19 +165,18 @@ export class BeamClient {
 
   private getApiRequestConfig() {
     if (!this.#config.publishableKey) {
-      throw new Error("Publishable key is not set");
+      throw new Error('Publishable key is not set');
     }
 
     return {
       baseURL: this.#config.apiUrl,
       headers: {
-        "x-api-key": this.#config.publishableKey,
+        'x-api-key': this.#config.publishableKey,
       },
     };
   }
 
-  private log(message: string) {
+  private log(_message: string) {
     if (!this.#config.debug) return;
-    console.log(message);
   }
 }

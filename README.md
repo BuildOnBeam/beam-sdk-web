@@ -1,1 +1,1 @@
-# beam-client-web
+# beam-sdk-web

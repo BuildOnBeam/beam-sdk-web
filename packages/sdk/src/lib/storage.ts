@@ -1,4 +1,4 @@
-import { Session } from "types";
+import { Session } from 'types';
 
 interface StorageContract<T> {
   get<K extends keyof T>(key: K): T[K] | null;
@@ -11,8 +11,8 @@ interface StorageContract<T> {
 }
 
 export enum StorageKey {
-  SESSION = "beam-session-session",
-  SIGNING_KEY = "beam-session-signing-key",
+  SESSION = 'beam-session-session',
+  SIGNING_KEY = 'beam-session-signing-key',
 }
 
 export interface StorageKeys {
@@ -32,9 +32,9 @@ export class StorageService<T> implements StorageContract<T> {
 
     if (
       value === null ||
-      value === "null" ||
+      value === 'null' ||
       value === undefined ||
-      value === "undefined"
+      value === 'undefined'
     ) {
       return null;
     }

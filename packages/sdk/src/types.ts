@@ -1,7 +1,7 @@
 export enum Environment {
-  MAINNET = "mainnet",
-  TESTNET = "testnet",
-  PREVIEW = "preview",
+  MAINNET = 'mainnet',
+  TESTNET = 'testnet',
+  PREVIEW = 'preview',
 }
 
 export type ClientConfig = {

@@ -1,4 +1,4 @@
-import { Session } from "types";
+import { Session } from 'types';
 
 export const isSessionValid = (session: Session | null): boolean => {
   if (!session || !session.isActive) return false;
@@ -12,7 +12,7 @@ export const isSessionValid = (session: Session | null): boolean => {
 
 export const isSessionOwnedBy = (
   session: Session | null,
-  address: string
+  address: string,
 ): boolean => {
   return session?.sessionAddress === address;
 };

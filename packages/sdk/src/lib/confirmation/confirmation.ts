@@ -1,21 +1,21 @@
-import { BeamConfiguration } from "../config";
+import { BeamConfiguration } from '../config';
 // import Overlay from "../overlay";
-import { openPopupCenter } from "./popup";
+import { openPopupCenter } from './popup';
 import {
   BEAM_EVENT_TYPE,
   ConfirmationResult,
   ReceiveMessage,
   SendMessage,
-} from "./types";
+} from './types';
 
-const CONFIRMATION_WINDOW_TITLE = "Confirm this transaction";
+const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
 const CONFIRMATION_WINDOW_HEIGHT = 720;
 const CONFIRMATION_WINDOW_WIDTH = 480;
 const CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION = 1000;
 
-export const CONFIRMATION_IFRAME_ID = "passport-confirm";
+export const CONFIRMATION_IFRAME_ID = 'passport-confirm';
 export const CONFIRMATION_IFRAME_STYLE =
-  "display: none; position: absolute;width:0px;height:0px;border:0;";
+  'display: none; position: absolute;width:0px;height:0px;border:0;';
 
 type MessageHandler = (arg0: MessageEvent) => void;
 
@@ -55,7 +55,7 @@ export default class ConfirmationScreen {
                 eventType: BEAM_EVENT_TYPE,
                 messageType: SendMessage.REQUEST_SESSION_START,
               },
-              this.config.authUrl
+              this.config.authUrl,
             );
             break;
           }
@@ -66,20 +66,20 @@ export default class ConfirmationScreen {
           }
           case ReceiveMessage.REQUEST_SESSION_ERROR: {
             this.closeWindow();
-            reject(new Error("Error during session request confirmation"));
+            reject(new Error('Error during session request confirmation'));
             break;
           }
           case ReceiveMessage.REQUEST_SESSION_REJECTED: {
             this.closeWindow();
-            reject(new Error("User rejected session request"));
+            reject(new Error('User rejected session request'));
             break;
           }
           default:
             this.closeWindow();
-            reject(new Error("Unsupported message type"));
+            reject(new Error('Unsupported message type'));
         }
       };
-      window.addEventListener("message", messageHandler);
+      window.addEventListener('message', messageHandler);
       this.showConfirmationScreen(url, messageHandler, resolve);
     });
   }
@@ -130,7 +130,7 @@ export default class ConfirmationScreen {
   showConfirmationScreen(
     href: string,
     messageHandler: MessageHandler,
-    resolve: Function
+    resolve: Function,
   ) {
     // If popup blocked, the confirmation window will not exist
     if (this.confirmationWindow) {
@@ -148,7 +148,7 @@ export default class ConfirmationScreen {
     const timerCallback = () => {
       if (this.confirmationWindow?.closed || this.overlayClosed) {
         clearInterval(this.timer);
-        window.removeEventListener("message", messageHandler);
+        window.removeEventListener('message', messageHandler);
         resolve({ confirmed: false });
         this.overlayClosed = false;
         this.confirmationWindow = undefined;
@@ -156,7 +156,7 @@ export default class ConfirmationScreen {
     };
     this.timer = setInterval(
       timerCallback,
-      CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION
+      CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION,
     );
 
     // this.overlay.update(() =>
@@ -180,7 +180,7 @@ export default class ConfirmationScreen {
       });
       this.timer = setInterval(
         timerCallback,
-        CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION
+        CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION,
       );
     } catch {
       /* Empty */

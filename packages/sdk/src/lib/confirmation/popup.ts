@@ -14,11 +14,11 @@ export const openPopupCenter = ({
 }: PopUpProps): Window => {
   const left = Math.max(
     0,
-    Math.round(window.screenX + (window.outerWidth - width) / 2)
+    Math.round(window.screenX + (window.outerWidth - width) / 2),
   );
   const top = Math.max(
     0,
-    Math.round(window.screenY + (window.outerHeight - height) / 2)
+    Math.round(window.screenY + (window.outerHeight - height) / 2),
   );
 
   const newWindow = window.open(
@@ -30,10 +30,10 @@ export const openPopupCenter = ({
         height=${height}, 
         top=${top}, 
         left=${left}
-       `
+       `,
   );
   if (!newWindow) {
-    throw new Error("Failed to open confirmation screen");
+    throw new Error('Failed to open confirmation screen');
   }
 
   newWindow.focus();
