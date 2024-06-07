@@ -256,6 +256,13 @@ export class BeamClient {
       }
     }
 
+    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
+    console.log(
+      'getActiveSessionAndKeys',
+      isSessionValid(session),
+      isSessionOwnedBy(session, key),
+    );
+
     if (isSessionValid(session) && isSessionOwnedBy(session, key)) {
       this.#storage.set(StorageKey.SESSION, session);
 

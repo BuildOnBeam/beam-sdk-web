@@ -20,12 +20,12 @@ export class BeamConfiguration {
         break;
 
       case Environment.TESTNET:
-        this.authUrl = 'https://identity.testnet.onbeam.com/';
+        this.authUrl = 'https://identity.testnet.onbeam.com';
         this.apiUrl = 'https://api.testnet.onbeam.com';
         break;
 
       case Environment.PREVIEW:
-        this.authUrl = 'https://identity.preview.onbeam.com/'; // todo: remove after SDK becomes stable
+        this.authUrl = 'https://identity.preview.onbeam.com';
         this.apiUrl = 'https://api.preview.onbeam.com';
         break;
     }

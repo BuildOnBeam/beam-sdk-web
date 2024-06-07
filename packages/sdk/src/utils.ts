@@ -1,3 +1,4 @@
+import { privateKeyToAccount } from 'viem/accounts';
 import { Session } from './types';
 
 export const isSessionValid = (session: Session | null): boolean => {
@@ -6,13 +7,19 @@ export const isSessionValid = (session: Session | null): boolean => {
   const now = Date.now();
 
   return (
-    Number(session.startTime ?? 0) <= now && Number(session.endTime ?? 0) >= now
+    // TODO check if times can be optional
+    Date.parse(session.startTime!).valueOf() <= now &&
+    Date.parse(session.endTime!).valueOf() >= now
   );
 };
 
 export const isSessionOwnedBy = (
   session: Session | null,
-  address: string,
+  key: string,
 ): boolean => {
-  return session?.sessionAddress === address;
+  const account = privateKeyToAccount(key as `0x${string}`);
+
+  return (
+    session?.sessionAddress?.toLowerCase() === account.address?.toLowerCase()
+  );
 };
