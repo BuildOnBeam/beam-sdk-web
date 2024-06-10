@@ -1,16 +1,11 @@
 import { BeamConfiguration } from '../config';
 // import Overlay from "../overlay";
 import { openPopupCenter } from './popup';
-import {
-  BEAM_EVENT_TYPE,
-  ConfirmationResult,
-  ReceiveMessage,
-  SendMessage,
-} from './types';
+import { BEAM_EVENT_TYPE, ConfirmationResult, ReceiveMessage } from './types';
 
 const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
 const CONFIRMATION_WINDOW_HEIGHT = 720;
-const CONFIRMATION_WINDOW_WIDTH = 480;
+const CONFIRMATION_WINDOW_WIDTH = 640;
 const CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION = 1000;
 
 export const CONFIRMATION_IFRAME_ID = 'passport-confirm';
@@ -49,16 +44,6 @@ export default class ConfirmationScreen {
         }
 
         switch (data.messageType as ReceiveMessage) {
-          case ReceiveMessage.CONFIRMATION_WINDOW_READY: {
-            this.confirmationWindow?.postMessage(
-              {
-                eventType: BEAM_EVENT_TYPE,
-                messageType: SendMessage.REQUEST_SESSION_START,
-              },
-              this.config.authUrl,
-            );
-            break;
-          }
           case ReceiveMessage.REQUEST_SESSION_CONFIRMED: {
             this.closeWindow();
             resolve({ confirmed: true });
@@ -95,17 +80,6 @@ export default class ConfirmationScreen {
         }
 
         switch (data.messageType as ReceiveMessage) {
-          case ReceiveMessage.CONFIRMATION_WINDOW_READY: {
-            this.confirmationWindow?.postMessage(
-              {
-                eventType: BEAM_EVENT_TYPE,
-                messageType: SendMessage.SIGN_OPERATION_START,
-                url,
-              },
-              this.config.authUrl,
-            );
-            break;
-          }
           case ReceiveMessage.SIGN_OPERATION_CONFIRMED: {
             this.closeWindow();
             resolve({ confirmed: true });

@@ -1,6 +1,11 @@
+import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.api.generated';
 import {
   CommonOperationResponse,
+  CommonOperationResponseStatus,
+  CommonOperationResponseTransactionsItemType,
+  ConfirmOperationRequestStatus,
+  ConfirmOperationRequestTransactionsItem,
   GenerateSessionRequestResponse,
 } from './lib/api/beam.types.generated';
 import { BeamConfiguration } from './lib/config';
@@ -8,21 +13,30 @@ import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { ClientConfig, Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import {
+  generatePrivateKey,
+  privateKeyToAccount,
+  signMessage,
+} from 'viem/accounts';
 
 export class BeamClient {
-  readonly #api = getPlayerAPI();
-
   readonly #config: BeamConfiguration;
-
   readonly #confirm: ConfirmationScreen;
 
   #storage = new StorageService<StorageKeys>(window.sessionStorage);
+
+  readonly api = getPlayerAPI();
 
   constructor(config: ClientConfig) {
     this.#config = new BeamConfiguration(config);
 
     this.#confirm = new ConfirmationScreen(this.#config);
+
+    AXIOS_INSTANCE.interceptors.request.use((config) => {
+      config.baseURL = this.#config.apiUrl;
+      config.headers.set('x-api-key', this.#config.publishableKey);
+      return config;
+    });
   }
 
   public setStorage(storage: Storage) {
@@ -78,14 +92,10 @@ export class BeamClient {
     try {
       const account = privateKeyToAccount(key as `0x${string}`);
 
-      sessionRequest = await this.#api.createSessionRequest(
-        entityId,
-        {
-          chainId,
-          address: account.address,
-        },
-        this.getApiRequestConfig(),
-      );
+      sessionRequest = await this.api.createSessionRequest(entityId, {
+        chainId,
+        address: account.address,
+      });
     } catch (error: unknown) {
       this.log(
         `Failed to create session request: ${
@@ -132,6 +142,15 @@ export class BeamClient {
   }
 
   /**
+   * Clear the current session
+   * @param entityId
+   * @param chainId
+   */
+  public async clearSession() {
+    this.#storage.clear();
+  }
+
+  /**
    * Sign an operation by id
    * @param entityId
    * @param operationId
@@ -142,6 +161,7 @@ export class BeamClient {
     entityId: string,
     operationId: string,
     chainId: number,
+    useBrowserFallback = false,
   ) {
     const { session, key } = await this.getActiveSessionAndKeys(
       entityId,
@@ -153,10 +173,7 @@ export class BeamClient {
     let operation: CommonOperationResponse | null = null;
 
     try {
-      const result = await this.#api.getOperation(
-        operationId,
-        this.getApiRequestConfig(),
-      );
+      const result = await this.api.getOperation(operationId);
 
       if (result) operation = result;
     } catch (error: unknown) {
@@ -174,17 +191,96 @@ export class BeamClient {
     }
 
     if (session && key) {
-      //   return this.signOperationUsingSession(operation, session, key);
+      return this.signOperationUsingSession(operation, entityId, session, key);
     }
 
-    return this.signOperationUsingBrowser(operation);
+    if (useBrowserFallback) {
+      return this.signOperationUsingBrowser(operation);
+    }
+
+    throw new Error(
+      'Unable to sign operation, no valid session or key found and no browser fallback enabled.',
+    );
   }
 
-  // private async signOperationUsingSession(
-  //   operation: CommonOperationResponse,
-  //   session: Session,
-  //   key: string,
-  // ) {}
+  private async signOperationUsingSession(
+    operation: CommonOperationResponse,
+    entityId: string,
+    _session: Session,
+    key: string,
+  ) {
+    if (!operation.transactions.length) {
+      throw new Error('No transactions found in operation');
+    }
+
+    let error: string | null = null;
+
+    const transactions: ConfirmOperationRequestTransactionsItem[] = [];
+
+    for (const transaction of operation.transactions) {
+      let signature: string | null = null;
+
+      try {
+        switch (transaction.type) {
+          case CommonOperationResponseTransactionsItemType.OpenfortTransaction:
+            signature = await signMessage({
+              message: `${transaction.data}`,
+              privateKey: key as `0x${string}`,
+            });
+            break;
+
+          case CommonOperationResponseTransactionsItemType.OpenfortReservoirOrder:
+            signature = '';
+            break;
+
+          default:
+            throw new Error(
+              `Unsupported transaction type: ${transaction.type}`,
+            );
+        }
+
+        transactions.push({
+          id: transaction.id,
+          signature,
+        });
+      } catch (err: unknown) {
+        this.log(
+          `Failed to sign transaction: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
+
+        error = err instanceof Error ? err.message : 'Unknown error.';
+      }
+    }
+
+    if (error) throw new Error(error);
+
+    try {
+      const result = await this.api.processOperation(operation.id, {
+        entityId,
+        gameId: operation.gameId,
+        status: ConfirmOperationRequestStatus.Pending,
+        transactions,
+      });
+
+      const _hasFailed =
+        result.status !== CommonOperationResponseStatus.Executed &&
+        result.status === CommonOperationResponseStatus.Pending;
+    } catch (err: unknown) {
+      this.log(
+        `Failed to sign operation: ${
+          err instanceof Error ? err.message : 'Unknown error.'
+        }`,
+      );
+
+      error = err instanceof Error ? err.message : 'Unknown error.';
+    }
+
+    if (error) throw new Error(error);
+
+    return true;
+  }
 
   private async signOperationUsingBrowser(operation: CommonOperationResponse) {
     let error: string | null = null;
@@ -237,13 +333,12 @@ export class BeamClient {
       const account = privateKeyToAccount(key as `0x${string}`);
 
       try {
-        const result = await this.#api.getActiveSession(
+        const result = await this.api.getActiveSession(
           entityId,
           account.address,
           {
             chainId,
           },
-          this.getApiRequestConfig(),
         );
 
         if (result) session = result as unknown as Session;
@@ -255,13 +350,6 @@ export class BeamClient {
         );
       }
     }
-
-    // biome-ignore lint/suspicious/noConsoleLog: <explanation>
-    console.log(
-      'getActiveSessionAndKeys',
-      isSessionValid(session),
-      isSessionOwnedBy(session, key),
-    );
 
     if (isSessionValid(session) && isSessionOwnedBy(session, key)) {
       this.#storage.set(StorageKey.SESSION, session);
@@ -289,19 +377,6 @@ export class BeamClient {
     this.#storage.set(StorageKey.SIGNING_KEY, key);
 
     return key;
-  }
-
-  private getApiRequestConfig() {
-    if (!this.#config.publishableKey) {
-      throw new Error('Publishable key is not set');
-    }
-
-    return {
-      baseURL: this.#config.apiUrl,
-      headers: {
-        'x-api-key': this.#config.publishableKey,
-      },
-    };
   }
 
   private log(message: string) {

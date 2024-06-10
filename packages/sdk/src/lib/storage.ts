@@ -11,8 +11,8 @@ interface StorageContract<T> {
 }
 
 export enum StorageKey {
-  SESSION = 'beam-session-session',
-  SIGNING_KEY = 'beam-session-signing-key',
+  SESSION = 'beam-session',
+  SIGNING_KEY = 'beam-signing-key',
 }
 
 export interface StorageKeys {
@@ -47,6 +47,8 @@ export class StorageService<T> implements StorageContract<T> {
   }
 
   clear(): void {
-    this.storage.clear();
+    for (const key in StorageKey) {
+      this.storage.removeItem(key);
+    }
   }
 }

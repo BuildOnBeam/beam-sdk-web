@@ -2,7 +2,7 @@ import { ClientConfig, Environment } from '../types';
 
 export class BeamConfiguration {
   public environment: Environment;
-  public publishableKey?: string;
+  public publishableKey: string;
   public debug?: boolean;
 
   public readonly authUrl: string;
