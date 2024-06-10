@@ -1,3 +1,5 @@
+import { serializeSignature, toHex } from 'viem';
+import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.api.generated';
 import {
@@ -13,11 +15,6 @@ import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { ClientConfig, Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
-import {
-  generatePrivateKey,
-  privateKeyToAccount,
-  signMessage,
-} from 'viem/accounts';
 
 export class BeamClient {
   readonly #config: BeamConfiguration;
@@ -155,6 +152,7 @@ export class BeamClient {
    * @param entityId
    * @param operationId
    * @param chainId
+   * @throws Error
    * @returns boolean
    */
   public async signOperation(
@@ -191,7 +189,7 @@ export class BeamClient {
     }
 
     if (session && key) {
-      return this.signOperationUsingSession(operation, entityId, session, key);
+      return this.signOperationUsingSession(operation, entityId, key);
     }
 
     if (useBrowserFallback) {
@@ -206,7 +204,6 @@ export class BeamClient {
   private async signOperationUsingSession(
     operation: CommonOperationResponse,
     entityId: string,
-    _session: Session,
     key: string,
   ) {
     if (!operation.transactions.length) {
@@ -221,16 +218,22 @@ export class BeamClient {
       let signature: string | null = null;
 
       try {
+        const account = privateKeyToAccount(key as `0x${string}`);
+
         switch (transaction.type) {
           case CommonOperationResponseTransactionsItemType.OpenfortTransaction:
-            signature = await signMessage({
+            signature = await account.signMessage({
               message: `${transaction.data}`,
-              privateKey: key as `0x${string}`,
             });
             break;
 
           case CommonOperationResponseTransactionsItemType.OpenfortReservoirOrder:
-            signature = '';
+            signature = serializeSignature(
+              await sign({
+                hash: toHex(`${transaction.data}`),
+                privateKey: key as `0x${string}`,
+              }),
+            );
             break;
 
           default:
@@ -264,9 +267,16 @@ export class BeamClient {
         transactions,
       });
 
-      const _hasFailed =
+      const hasFailed =
         result.status !== CommonOperationResponseStatus.Executed &&
-        result.status === CommonOperationResponseStatus.Pending;
+        result.status !== CommonOperationResponseStatus.Signed &&
+        result.status !== CommonOperationResponseStatus.Pending;
+
+      if (hasFailed) {
+        throw new Error(`Operation failed with status: ${result.status}`);
+      }
+
+      this.log(`Operation signed: ${result.status}`);
     } catch (err: unknown) {
       this.log(
         `Failed to sign operation: ${
