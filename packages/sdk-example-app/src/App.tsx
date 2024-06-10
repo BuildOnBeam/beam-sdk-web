@@ -1,12 +1,16 @@
-import './styles.css';
-import type { ClientConfig, Session } from '@onbeam/sdk';
-import { Environment } from '@onbeam/sdk';
-import { BeamClient } from '@onbeam/sdk';
-import beamLogo from '/beam-logo.png';
+import type {
+  ClientConfig,
+  GetAssetListingsResponseDataItem,
+  GetAssetsForUserResponseDataItem,
+  Session,
+} from '@onbeam/sdk';
+import { BeamClient, Environment } from '@onbeam/sdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import './styles.css';
+import beamLogo from '/beam-logo.png';
 
 const entityId = import.meta.env.VITE_BEAM_ENTITY_ID;
-const chainId = Number(import.meta.env.VITE_BEAM_CHAIN_ID);
+const chainId = 13337; // Beam Testnet
 
 const config: ClientConfig = {
   environment: Environment.PREVIEW,
@@ -14,11 +18,18 @@ const config: ClientConfig = {
   debug: true,
 };
 
+type Asset = {
+  asset: GetAssetsForUserResponseDataItem;
+  listings?: GetAssetListingsResponseDataItem[];
+};
+
 const App = () => {
   const client = useRef(new BeamClient(config));
 
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [assets, setAssets] = useState<Asset[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -31,15 +42,7 @@ const App = () => {
         setSession(session_);
 
         if (session_) {
-          client.current.api.getUser(entityId).then((_user) => {});
-
-          client.current.api
-            .getUserAssetsForGamePost(entityId, {
-              chainId,
-              // contract: '0xb33A26f81bB89b653A2363cE13ED983B39613372',
-              includeAttributes: true,
-            })
-            .then((_assets) => {});
+          fetchAssetsWithListings();
         }
       } catch (error: unknown) {
         setError(error instanceof Error ? error.message : 'Unknown error.');
@@ -77,34 +80,69 @@ const App = () => {
     }
   }, []);
 
-  const mintNFT = useCallback(async () => {
+  // TODO add continuation support
+  const fetchAssetsWithListings = useCallback(
+    () =>
+      Promise.all([
+        client.current.api.getUserAssetsForGamePost(entityId, {
+          chainId,
+          contract: '0x8913d575CdFe16dC958c72009BF63e39CCAE795F',
+          sortBy: 'acquiredAt', // Newest first
+          sortDirection: 'desc',
+        }),
+        client.current.api.getListedAssetsForUser(entityId, {
+          chainId,
+          assetAddresses: ['0x8913d575CdFe16dC958c72009BF63e39CCAE795F'],
+        }),
+      ]).then(([assets_, listings_]) => {
+        const assets = assets_.data.map((asset) => {
+          const listings = listings_.data.filter(
+            (listing) =>
+              listing.assetAddress === asset.assetAddress &&
+              listing.assetId === asset.assetId,
+          );
+
+          return { asset, listings };
+        });
+
+        setAssets(assets);
+      }),
+
+    [],
+  );
+
+  const mintAsset = useCallback(async () => {
     if (!session) return;
 
     try {
+      /**
+       * This payload is an example of minting an NFT using the Beam SDK.
+       * After signing the operation, the NFT will be minted to the user's account
+       * and discoverable via [Sphere](https://testnet.sphere.market/beam-testnet/collection/0x8913d575CdFe16dC958c72009BF63e39CCAE795F).
+       */
+      const operationPayload = {
+        chainId,
+        interactions: [
+          {
+            contractAddress: '0x8913d575CdFe16dC958c72009BF63e39CCAE795F',
+            functionName: 'safeMint',
+            functionArgs: [
+              '0xb33A26f81bB89b653A2363cE13ED983B39613372',
+              'bafybeiend3mtarqmkgfa4uqqkb2ucv7dnshbhdzbwr6tcosbtsxkdlpq6q/0.json',
+            ],
+          },
+        ],
+        sponsor: true,
+      };
+
       const operation = await client.current.api.createUserTransaction(
         entityId,
-        {
-          chainId,
-          interactions: [
-            {
-              contractAddress: '0x8913d575CdFe16dC958c72009BF63e39CCAE795F',
-              functionName: 'safeMint',
-              functionArgs: [
-                '0xb33A26f81bB89b653A2363cE13ED983B39613372',
-                'bafybeiend3mtarqmkgfa4uqqkb2ucv7dnshbhdzbwr6tcosbtsxkdlpq6q/0.json',
-              ],
-            },
-          ],
-          sponsor: true,
-        },
+        operationPayload,
       );
 
       if (!operation) {
         throw new Error('Failed to create user transaction.');
       }
-
-      // Create user operation
-      // sign operation using browser
 
       const signed = await client.current.signOperation(
         entityId,
@@ -113,6 +151,8 @@ const App = () => {
       );
 
       if (signed) {
+        fetchAssetsWithListings();
+
         return;
       }
 
@@ -120,7 +160,52 @@ const App = () => {
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Unknown error.');
     }
-  }, [session]);
+  }, [session, fetchAssetsWithListings]);
+
+  const listAsset = useCallback(
+    async (asset: Asset['asset']) => {
+      if (!session) return;
+
+      try {
+        const operation = await client.current.api.listAsset(entityId, {
+          assetAddress: asset.assetAddress,
+          assetId: asset.assetId,
+          chainId,
+          currency: 'BEAM',
+          // startTime?: string | null;
+          // endTime?: string | null;
+          // operationId?: string | null;
+          // operationProcessing?: SellAssetRequestInputOperationProcessing;
+          // policyId?: string | null;
+          price: '1', // 1 BEAM
+          quantity: 1,
+          sellType: 'FixedPrice',
+          sponsor: true,
+        });
+
+        if (!operation) {
+          throw new Error('Failed to create user transaction.');
+        }
+
+        const signed = await client.current.signOperation(
+          entityId,
+          operation.id,
+          chainId,
+        );
+
+        if (signed) {
+          fetchAssetsWithListings();
+
+          return;
+        }
+
+        setError('Failed to list asset.');
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Unknown error.');
+      }
+    },
+    [session, fetchAssetsWithListings],
+  );
 
   return (
     <div>
@@ -150,11 +235,43 @@ const App = () => {
           <div className="session-details">Session ID: {session.id}</div>
 
           <div className="card">
-            <button id="mintNFTButton" type="button" onClick={mintNFT}>
+            <h2>Assets</h2>
+            <ul>
+              {assets.map(({ asset, listings }) => (
+                <li key={asset.assetId}>
+                  <img src={asset.imageUrl} alt={asset.name} />
+                  <p>{asset.name}</p>
+
+                  <ul>
+                    {listings?.map((listing) => (
+                      <li key={listing.id}>
+                        <p>ID: {listing.id}</p>
+                        <button
+                          type="button"
+                          onClick={() => cancelListing(listing)}
+                        >
+                          Cancel listing
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button type="button" onClick={() => listAsset(asset)}>
+                    List
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {assets.length === 0 && <p>No assets minted (yet).</p>}
+          </div>
+
+          <div className="card">
+            <button id="mintAssetButton" type="button" onClick={mintAsset}>
               Mint NFT
             </button>
 
-            <button id="mintNFTButton" type="button" onClick={clearSession}>
+            <button id="mintAssetButton" type="button" onClick={clearSession}>
               Clear session
             </button>
           </div>
