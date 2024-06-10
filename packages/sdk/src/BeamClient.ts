@@ -1,4 +1,4 @@
-import { Hex, isHex, serializeSignature } from 'viem';
+import { Hex, serializeSignature } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.api.generated';
@@ -213,21 +213,17 @@ export class BeamClient {
 
     const transactions: ConfirmOperationRequestTransactionsItem[] = [];
 
-    for (const { hash, id } of operation.transactions) {
+    for (const tx of operation.transactions) {
       try {
-        if (!isHex(hash)) {
-          throw new Error('Transaction hash is invalid');
-        }
-
         const signature = serializeSignature(
           await sign({
-            hash,
+            hash: tx.hash as Hex,
             privateKey,
           }),
         );
 
         transactions.push({
-          id,
+          id: tx.id,
           signature,
         });
       } catch (err: unknown) {
