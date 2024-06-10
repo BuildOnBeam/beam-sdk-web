@@ -1,5 +1,5 @@
 {
-  "name": "beam-sdk-web-example",
+  "name": "beam-sdk-example-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",

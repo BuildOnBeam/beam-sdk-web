@@ -1,11 +1,10 @@
-import { serializeSignature, toHex } from 'viem';
+import { serializeSignature } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.api.generated';
 import {
   CommonOperationResponse,
   CommonOperationResponseStatus,
-  CommonOperationResponseTransactionsItemType,
   ConfirmOperationRequestStatus,
   ConfirmOperationRequestTransactionsItem,
   GenerateSessionRequestResponse,
@@ -148,7 +147,7 @@ export class BeamClient {
   }
 
   /**
-   * Sign an operation by id
+   * Sign an operation by its id
    * @param entityId
    * @param operationId
    * @param chainId
@@ -215,32 +214,13 @@ export class BeamClient {
     const transactions: ConfirmOperationRequestTransactionsItem[] = [];
 
     for (const transaction of operation.transactions) {
-      let signature: string | null = null;
-
       try {
-        const account = privateKeyToAccount(key as `0x${string}`);
-
-        switch (transaction.type) {
-          case CommonOperationResponseTransactionsItemType.OpenfortTransaction:
-            signature = await account.signMessage({
-              message: `${transaction.data}`,
-            });
-            break;
-
-          case CommonOperationResponseTransactionsItemType.OpenfortReservoirOrder:
-            signature = serializeSignature(
-              await sign({
-                hash: toHex(`${transaction.data}`),
-                privateKey: key as `0x${string}`,
-              }),
-            );
-            break;
-
-          default:
-            throw new Error(
-              `Unsupported transaction type: ${transaction.type}`,
-            );
-        }
+        const signature = serializeSignature(
+          await sign({
+            hash: transaction.hash as `0x${string}`,
+            privateKey: key as `0x${string}`,
+          }),
+        );
 
         transactions.push({
           id: transaction.id,
