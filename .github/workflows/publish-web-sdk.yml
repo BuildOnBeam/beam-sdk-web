@@ -29,7 +29,7 @@ jobs:
         run: pnpm sdk generate
 
       - name: Build the sdk
-        run: pnpm prepublish
+        run: pnpm sdk prepublish
 
       - name: Move consumer docs to the sdk package
         run: mv ./README.md ./packages/sdk/README.md
