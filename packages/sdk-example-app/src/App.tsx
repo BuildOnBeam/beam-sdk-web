@@ -20,7 +20,7 @@ const config: ClientConfig = {
 
 type Asset = {
   asset: GetAssetsForUserResponseDataItem;
-  listings?: GetAssetListingsResponseDataItem[];
+  listing?: GetAssetListingsResponseDataItem | null;
 };
 
 const App = () => {
@@ -28,24 +28,29 @@ const App = () => {
 
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
 
   const [assets, setAssets] = useState<Asset[]>([]);
 
   useEffect(() => {
     const init = async () => {
+      setError(null);
+      setLoading('Loading session...');
+
       try {
         const session_ = await client.current.getActiveSession(
           entityId,
           chainId,
         );
 
-        setSession(session_);
-
         if (session_) {
+          setSession(session_);
           fetchAssetsWithListings();
         }
       } catch (error: unknown) {
         setError(error instanceof Error ? error.message : 'Unknown error.');
+      } finally {
+        setLoading(null);
       }
     };
 
@@ -53,6 +58,9 @@ const App = () => {
   }, []);
 
   const createSession = useCallback(async () => {
+    setError(null);
+    setLoading('Creating session...');
+
     try {
       const session_ = await client.current.createSession(entityId, chainId);
 
@@ -60,12 +68,16 @@ const App = () => {
         setSession(session_);
         setError(null);
 
+        fetchAssetsWithListings();
+
         return;
       }
 
       setError('Failed to create session.');
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Unknown error.');
+    } finally {
+      setLoading(null);
     }
   }, []);
 
@@ -75,6 +87,7 @@ const App = () => {
 
       setSession(null);
       setError(null);
+      setAssets([]);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Unknown error.');
     }
@@ -96,13 +109,13 @@ const App = () => {
         }),
       ]).then(([assets_, listings_]) => {
         const assets = assets_.data.map((asset) => {
-          const listings = listings_.data.filter(
+          const listing = listings_.data.filter(
             (listing) =>
               listing.assetAddress === asset.assetAddress &&
               listing.assetId === asset.assetId,
-          );
+          )[0];
 
-          return { asset, listings };
+          return { asset, listing };
         });
 
         setAssets(assets);
@@ -113,6 +126,9 @@ const App = () => {
 
   const mintAsset = useCallback(async () => {
     if (!session) return;
+
+    setError(null);
+    setLoading('Minting asset...');
 
     try {
       /**
@@ -159,6 +175,8 @@ const App = () => {
       setError('Failed to mint NFT.');
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Unknown error.');
+    } finally {
+      setLoading(null);
     }
   }, [session, fetchAssetsWithListings]);
 
@@ -166,17 +184,15 @@ const App = () => {
     async (asset: Asset['asset']) => {
       if (!session) return;
 
+      setError(null);
+      setLoading(`Listing asset ${asset.assetId}...`);
+
       try {
         const operation = await client.current.api.listAsset(entityId, {
           assetAddress: asset.assetAddress,
           assetId: asset.assetId,
           chainId,
           currency: 'BEAM',
-          // startTime?: string | null;
-          // endTime?: string | null;
-          // operationId?: string | null;
-          // operationProcessing?: SellAssetRequestInputOperationProcessing;
-          // policyId?: string | null;
           price: '1', // 1 BEAM
           quantity: 1,
           sellType: 'FixedPrice',
@@ -202,24 +218,85 @@ const App = () => {
         setError('Failed to list asset.');
       } catch (error: unknown) {
         setError(error instanceof Error ? error.message : 'Unknown error.');
+      } finally {
+        setLoading(null);
+      }
+    },
+    [session, fetchAssetsWithListings],
+  );
+
+  const cancelListing = useCallback(
+    async (listing: GetAssetListingsResponseDataItem) => {
+      if (!session) return;
+
+      setError(null);
+      setLoading(`Cancelling asset ${listing.assetId} listing...`);
+
+      try {
+        const operation = await client.current.api.cancelListing(
+          entityId,
+          listing.id,
+          {
+            sponsor: true,
+          },
+        );
+
+        if (!operation) {
+          throw new Error('Failed to create user transaction.');
+        }
+
+        const signed = await client.current.signOperation(
+          entityId,
+          operation.id,
+          chainId,
+        );
+
+        if (signed) {
+          fetchAssetsWithListings();
+
+          return;
+        }
+
+        setError('Failed to list asset.');
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Unknown error.');
+      } finally {
+        setLoading(null);
       }
     },
     [session, fetchAssetsWithListings],
   );
 
   return (
-    <div>
+    <div className="flex flex-col min-h-full gap-6">
       <a
         href="https://docs.onbeam.com/service/sdk"
         rel="noreferrer"
         target="_blank"
       >
-        <img src={beamLogo} className="logo" alt="Beam Docs" />
+        <img
+          src={beamLogo}
+          className="h-16 block mx-auto transition-all duration-300 will-change-auto hover:shadow-logo-hover"
+          alt="Beam Docs"
+        />
       </a>
-      <h1>Beam SDK Web Example</h1>
+
+      <h1 className="text-3xl font-semibold">Beam Web SDK Example</h1>
+
+      {error && <div className="text-red-600 font-medium">{error}</div>}
+
+      {loading && (
+        <div className="text-gray-400 font-medium flex items-center gap-2 mx-auto">
+          <div
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-gray-500 border-e-transparent align-[-0.125em] text-surface motion-reduce:animate-[spin_1.5s_linear_infinite] "
+            role="status"
+          />
+          {loading}
+        </div>
+      )}
 
       {!session && (
-        <div className="card">
+        <div>
           <button
             id="createSessionButton"
             type="button"
@@ -232,95 +309,111 @@ const App = () => {
 
       {session && (
         <>
-          <div className="session-details">Session ID: {session.id}</div>
+          <div className="w-full max-w-4xl mx-auto px-4 md:px-6 pt-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Session</h2>
 
-          <div className="card">
-            <h2>Assets</h2>
-            <ul>
-              {assets.map(({ asset, listings }) => (
-                <li key={asset.assetId}>
-                  <img src={asset.imageUrl} alt={asset.name} />
-                  <p>{asset.name}</p>
+              <button id="mintAssetButton" type="button" onClick={clearSession}>
+                Clear
+              </button>
+            </div>
 
-                  <ul>
-                    {listings?.map((listing) => (
-                      <li key={listing.id}>
-                        <p>ID: {listing.id}</p>
-                        <button
-                          type="button"
-                          onClick={() => cancelListing(listing)}
-                        >
-                          Cancel listing
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button type="button" onClick={() => listAsset(asset)}>
-                    List
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {assets.length === 0 && <p>No assets minted (yet).</p>}
+            <div className="border-2 border-gray-600 rounded-lg overflow-hidden py-4 px-6">
+              Valid until {new Date(session.endTime!).toLocaleString()}.
+            </div>
           </div>
 
-          <div className="card">
-            <button id="mintAssetButton" type="button" onClick={mintAsset}>
-              Mint NFT
-            </button>
+          <div className="w-full max-w-4xl mx-auto px-4 md:px-6 pt-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Assets</h2>
 
-            <button id="mintAssetButton" type="button" onClick={clearSession}>
-              Clear session
-            </button>
+              <button id="mintAssetButton" type="button" onClick={mintAsset}>
+                Mint
+              </button>
+            </div>
+            <div className="border-2 border-gray-600 rounded-lg overflow-hidden">
+              {!assets.length ? (
+                <div className="flex items-center justify-center h-[120px]">
+                  <p>No assets minted (yet).</p>
+                </div>
+              ) : (
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="[&_tr]:border-b-2">
+                    <tr className="border-gray-600 text-gray-200">
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[80px]">
+                        Image
+                      </th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                        Name
+                      </th>
+                      <th className="h-12 px-4 align-middle font-medium text-muted-foreground  text-right">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {assets.map(({ asset, listing }) => (
+                      <tr
+                        key={asset.assetId}
+                        className="border-b-2 border-gray-600 hover:bg-muted/50 data-[state=selected]:bg-muted"
+                      >
+                        <td className="p-4 align-middle">
+                          <img
+                            src={asset.imageUrl}
+                            alt={asset.name}
+                            width="64"
+                            height="64"
+                            className="aspect-square object-cover rounded-md"
+                          />
+                        </td>
+
+                        <td className="p-4 align-middle text-left font-medium">
+                          <span className="font-medium text-lg">
+                            {asset.name}
+                          </span>
+                          <a
+                            href={`https://preview.sphere.market/beam-testnet/nft/0x8913d575CdFe16dC958c72009BF63e39CCAE795F/${asset.assetId}`}
+                            rel="noreferrer"
+                            target="_blank"
+                            className="block"
+                          >
+                            View on Sphere
+                          </a>
+                        </td>
+
+                        <td className="p-4 align-middle text-right">
+                          {listing ? (
+                            <button
+                              type="button"
+                              onClick={() => cancelListing(listing)}
+                            >
+                              Cancel listing
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => listAsset(asset)}
+                            >
+                              List for 1 BEAM
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </>
       )}
 
-      {error && <div className="error">{error}</div>}
-
-      <p className="read-the-docs">Click on the Beam logo to learn more</p>
+      <p className="text-gray-400">
+        Click on the Beam logo to view the SDK docs.
+      </p>
     </div>
   );
 };
 
 export default App;
-
-// async function init() {
-//   try {
-//     const session = await client.getActiveSession(entityId, 13337);
-
-//     if (session) {
-//       document.querySelector<HTMLDivElement>('#session-details')!.innerHTML = `
-//         <p>Session ID: ${session.id}</p>
-//         <p>Session Address: ${session.sessionAddress}</p>
-//       `;
-//     }
-
-//     return;
-//   } catch (error) {
-//     console.error(error);
-
-//     document
-//       .querySelector<HTMLButtonElement>('#createSessionButton')!
-//       .addEventListener('click', async () => {
-//         try {
-//           const session = await client.createSession(entityId, 13337);
-
-//           if (session) {
-//             document.querySelector<HTMLDivElement>(
-//               '#session-details',
-//             )!.innerHTML = `
-//             <p>Session ID: ${session.id}</p>
-//             <p>Session Address: ${session.sessionAddress}</p>
-//           `;
-//           }
-//         } catch (error) {
-//           console.error(error);
-//         }
-//       });
-//   }
-// }
-
-// init();

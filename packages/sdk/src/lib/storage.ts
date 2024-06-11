@@ -47,7 +47,7 @@ export class StorageService<T> implements StorageContract<T> {
   }
 
   clear(): void {
-    for (const key in StorageKey) {
+    for (const key of Object.values(StorageKey)) {
       this.storage.removeItem(key);
     }
   }

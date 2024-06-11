@@ -52,6 +52,8 @@ export class BeamClient {
     if (!session) {
       this.log('Unable to get active session');
 
+      this.#storage.clear();
+
       throw new Error('No active session found');
     }
 

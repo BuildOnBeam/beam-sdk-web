@@ -1,12 +1,12 @@
 import { ClientConfig, Environment } from '../types';
 
 export class BeamConfiguration {
-  public environment: Environment;
-  public publishableKey: string;
-  public debug?: boolean;
+  readonly environment: Environment;
+  readonly publishableKey: string;
+  readonly debug?: boolean;
 
-  public readonly authUrl: string;
-  public readonly apiUrl: string;
+  readonly authUrl: string;
+  readonly apiUrl: string;
 
   constructor(config: ClientConfig) {
     this.environment = config.environment;
