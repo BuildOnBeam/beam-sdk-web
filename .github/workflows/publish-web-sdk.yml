@@ -1,0 +1,47 @@
+name: 'Release @onbeam/sdk'
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-design-system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: 'main'
+          fetch-tags: 'true'
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📥 dependency installation
+        uses: ./.github/actions/pnpm-install
+
+      - name: Generate dependencies
+        run: pnpm sdk generate
+
+      - name: Build the sdk
+        run: pnpm prepublish
+
+      - name: Move consumer docs to the sdk package
+        run: mv ./README.md ./packages/sdk/README.md
+        run: mv ./LICENSE ./packages/sdk/LICENSE
+        run: mv ./NOTICE ./packages/sdk/NOTICE
+
+      # Set-up the .npmrc to authenticate with the npm registry
+      - name: Setup npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
+      # Publish packages to npm
+      - name: 🚀 Publish @onbeam/sdk
+        run: pnpm publish --no-git-checks --access public
+        working-directory: ./packages/sdk
+
