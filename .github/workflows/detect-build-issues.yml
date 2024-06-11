@@ -31,5 +31,9 @@ jobs:
         run: pnpm validate:ci
 
       # Run the build
+      - name: Generate dependencies
+        run: pnpm sdk generate
+
+      # Run the build
       - name: Build the project
         run: pnpm sdk prepublish
