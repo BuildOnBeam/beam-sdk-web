@@ -1,4 +1,4 @@
-import { serializeSignature } from 'viem';
+import { Hex, serializeSignature } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.api.generated';
@@ -86,7 +86,7 @@ export class BeamClient {
     let sessionRequest: GenerateSessionRequestResponse | null = null;
 
     try {
-      const account = privateKeyToAccount(key as `0x${string}`);
+      const account = privateKeyToAccount(key);
 
       sessionRequest = await this.api.createSessionRequest(entityId, {
         chainId,
@@ -203,7 +203,7 @@ export class BeamClient {
   private async signOperationUsingSession(
     operation: CommonOperationResponse,
     entityId: string,
-    key: string,
+    privateKey: Hex,
   ) {
     if (!operation.transactions.length) {
       throw new Error('No transactions found in operation');
@@ -213,17 +213,17 @@ export class BeamClient {
 
     const transactions: ConfirmOperationRequestTransactionsItem[] = [];
 
-    for (const transaction of operation.transactions) {
+    for (const tx of operation.transactions) {
       try {
         const signature = serializeSignature(
           await sign({
-            hash: transaction.hash as `0x${string}`,
-            privateKey: key as `0x${string}`,
+            hash: tx.hash as Hex,
+            privateKey,
           }),
         );
 
         transactions.push({
-          id: transaction.id,
+          id: tx.id,
           signature,
         });
       } catch (err: unknown) {
@@ -320,7 +320,7 @@ export class BeamClient {
     const key = this.getOrCreateSigningKey();
 
     if (!isSessionValid(session)) {
-      const account = privateKeyToAccount(key as `0x${string}`);
+      const account = privateKeyToAccount(key);
 
       try {
         const result = await this.api.getActiveSession(
