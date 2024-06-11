@@ -1,5 +1,6 @@
 import { privateKeyToAccount } from 'viem/accounts';
 import { Session } from './types';
+import { Hex } from 'viem';
 
 export const isSessionValid = (session: Session | null): boolean => {
   if (!session || !session.isActive) return false;
@@ -15,9 +16,9 @@ export const isSessionValid = (session: Session | null): boolean => {
 
 export const isSessionOwnedBy = (
   session: Session | null,
-  key: string,
+  key: Hex,
 ): boolean => {
-  const account = privateKeyToAccount(key as `0x${string}`);
+  const account = privateKeyToAccount(key);
 
   return (
     session?.sessionAddress?.toLowerCase() === account.address?.toLowerCase()

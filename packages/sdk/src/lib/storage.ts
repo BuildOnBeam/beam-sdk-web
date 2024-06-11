@@ -1,3 +1,4 @@
+import { Hex } from 'viem';
 import { Session } from '../types';
 
 interface StorageContract<T> {
@@ -17,7 +18,7 @@ export enum StorageKey {
 
 export interface StorageKeys {
   [StorageKey.SESSION]: Session | null;
-  [StorageKey.SIGNING_KEY]: string | null;
+  [StorageKey.SIGNING_KEY]: Hex | null;
 }
 
 export class StorageService<T> implements StorageContract<T> {
