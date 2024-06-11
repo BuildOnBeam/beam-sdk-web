@@ -31,9 +31,13 @@ jobs:
       - name: Build the sdk
         run: pnpm sdk prepublish
 
-      - name: Move consumer docs to the sdk package
+      - name: move README.md to the sdk package
         run: mv ./README.md ./packages/sdk/README.md
+
+      - name: move LICENSE to the sdk package
         run: mv ./LICENSE ./packages/sdk/LICENSE
+
+      - name: move NOTICE to the sdk package
         run: mv ./NOTICE ./packages/sdk/NOTICE
 
       # Set-up the .npmrc to authenticate with the npm registry
