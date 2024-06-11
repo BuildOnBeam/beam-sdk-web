@@ -2,6 +2,7 @@ import type {
   ClientConfig,
   GetAssetListingsResponseDataItem,
   GetAssetsForUserResponseDataItem,
+  GetUserResponse,
   Session,
 } from '@onbeam/sdk';
 import { BeamClient, Environment } from '@onbeam/sdk';
@@ -31,6 +32,7 @@ const App = () => {
   const [loading, setLoading] = useState<string | null>(null);
 
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [user, setUser] = useState<GetUserResponse | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -38,6 +40,11 @@ const App = () => {
       setLoading('Loading session...');
 
       try {
+        const user = await client.current.api.getUser(entityId);
+        if (user) {
+          setUser(user);
+        }
+
         const session_ = await client.current.getActiveSession(
           entityId,
           chainId,
@@ -125,7 +132,7 @@ const App = () => {
   );
 
   const mintAsset = useCallback(async () => {
-    if (!session) return;
+    if (!session || !user) return;
 
     setError(null);
     setLoading('Minting asset...');
@@ -143,7 +150,8 @@ const App = () => {
             contractAddress: '0x8913d575CdFe16dC958c72009BF63e39CCAE795F',
             functionName: 'safeMint',
             functionArgs: [
-              '0xb33A26f81bB89b653A2363cE13ED983B39613372',
+              user.wallets.find((wallet) => wallet.chainId === chainId)
+                ?.address,
               'bafybeiend3mtarqmkgfa4uqqkb2ucv7dnshbhdzbwr6tcosbtsxkdlpq6q/0.json',
             ],
           },
@@ -178,7 +186,7 @@ const App = () => {
     } finally {
       setLoading(null);
     }
-  }, [session, fetchAssetsWithListings]);
+  }, [session, user, fetchAssetsWithListings]);
 
   const listAsset = useCallback(
     async (asset: Asset['asset']) => {
