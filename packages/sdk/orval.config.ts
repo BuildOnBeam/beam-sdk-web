@@ -13,6 +13,7 @@ const config: ReturnType<typeof defineConfig> = defineConfig({
       },
       schemas: './src/lib/api/beam.types.generated',
       indexFiles: true,
+      biome: true,
     },
     input: {
       target: 'https://api.preview.onbeam.com/api/player-json',

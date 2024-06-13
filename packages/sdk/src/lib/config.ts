@@ -7,6 +7,7 @@ export class BeamConfiguration {
 
   readonly authUrl: string;
   readonly apiUrl: string;
+  readonly rpcUrl: string;
 
   constructor(config: ClientConfig) {
     this.environment = config.environment;
@@ -17,16 +18,19 @@ export class BeamConfiguration {
       case Environment.MAINNET:
         this.authUrl = 'https://identity.onbeam.com';
         this.apiUrl = 'https://api.onbeam.com';
+        this.rpcUrl = 'https://build.onbeam.com/rpc';
         break;
 
       case Environment.TESTNET:
         this.authUrl = 'https://identity.testnet.onbeam.com';
         this.apiUrl = 'https://api.testnet.onbeam.com';
+        this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
         break;
 
       case Environment.PREVIEW:
         this.authUrl = 'https://identity.preview.onbeam.com';
         this.apiUrl = 'https://api.preview.onbeam.com';
+        this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
         break;
     }
   }

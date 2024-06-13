@@ -41,6 +41,7 @@ const App = () => {
 
       try {
         const user = await client.current.api.getUser(entityId);
+
         if (user) {
           setUser(user);
         }

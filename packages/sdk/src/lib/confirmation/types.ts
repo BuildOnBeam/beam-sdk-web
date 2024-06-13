@@ -1,3 +1,5 @@
+import { Hex } from 'viem';
+
 export const BEAM_EVENT_TYPE = 'beam_confirmation';
 
 export enum ReceiveMessage {
@@ -8,8 +10,18 @@ export enum ReceiveMessage {
   SIGN_OPERATION_CONFIRMED = 'sign_operation_confirmed',
   SIGN_OPERATION_ERROR = 'sign_operation_error',
   SIGN_OPERATION_REJECTED = 'sign_operation_rejected',
+
+  REQUEST_CONNECTION_CONFIRMED = 'request_connection_confirmed',
+  REQUEST_CONNECTION_ERROR = 'request_connection_error',
+  REQUEST_CONNECTION_REJECTED = 'request_connection_rejected',
 }
 
 export type ConfirmationResult = {
   confirmed: boolean;
+};
+
+export type RequestConnectionResult = {
+  signature: string;
+  address: Hex;
+  ownerAddress: Hex;
 };
