@@ -28,7 +28,7 @@ export class BeamConfiguration {
         break;
 
       case Environment.PREVIEW:
-        this.authUrl = 'https://identity.preview.onbeam.com';
+        this.authUrl = 'http://localhost:3000'; // 'https://identity.preview.onbeam.com';
         this.apiUrl = 'https://api.preview.onbeam.com';
         this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
         break;

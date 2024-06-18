@@ -35,6 +35,9 @@ importers:
       axios:
         specifier: ^1.7.2
         version: 1.7.2
+      events:
+        specifier: ^3.3.0
+        version: 3.3.0
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0

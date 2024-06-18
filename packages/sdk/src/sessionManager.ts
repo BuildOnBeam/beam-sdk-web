@@ -119,7 +119,12 @@ export class SessionManager {
 
       // TODO add timeout
 
-      const result = await this.#confirm.requestSession(sessionRequest.url);
+      const result = await this.#confirm.requestSession(
+        sessionRequest.url.replace(
+          'https://identity.preview.onbeam.com',
+          this.#config.authUrl,
+        ),
+      );
 
       this.log(`Session request confirmed: ${result.confirmed}`);
 
@@ -154,12 +159,17 @@ export class SessionManager {
     let address: string | null = null;
 
     try {
-      const connection = await this.api.createConnectionRequest({
+      const connection = await this.api.generateWebConnection({
         chainId,
         message: hashMessage(message) as Hex,
       });
 
-      const result = await this.#confirm.requestConnection(connection.url);
+      const result = await this.#confirm.requestConnection(
+        connection.url.replace(
+          'https://identity.preview.onbeam.com',
+          this.#config.authUrl,
+        ),
+      );
 
       const verified = await verifyMessage({
         message,
@@ -194,11 +204,79 @@ export class SessionManager {
    * @param message
    * @returns string
    */
-  async signMessage(message: SignableMessage) {
-    const key = this.getOrCreateSigningKey();
+  async signMessage(chainId: number, message: SignableMessage) {
+    let signature: string | null = null;
 
-    const account = privateKeyToAccount(key);
-    return account.signMessage({ message });
+    try {
+      const connection = await this.api.generateWebConnection({
+        chainId,
+        message: hashMessage(message) as Hex,
+      });
+
+      const result = await this.#confirm.requestConnection(
+        connection.url.replace(
+          'https://identity.preview.onbeam.com',
+          this.#config.authUrl,
+        ),
+      );
+
+      const verified = await verifyMessage({
+        message,
+        signature: result.signature as Hex,
+        address: result.ownerAddress,
+      });
+
+      if (!verified) {
+        throw new Error('Failed to verify signature');
+      }
+
+      if (result.signature) {
+        signature = result.signature;
+      }
+    } catch (error: unknown) {
+      this.log(
+        `Failed to get signature: ${
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!signature) {
+      throw new Error('Failed to get signature');
+    }
+
+    return signature;
+  }
+
+  /**
+   * Request a signature from the user
+   * @param message
+   * @returns string
+   */
+  async requestSignature(chainId: number, payload: string) {
+    let signature: string | null = null;
+
+    try {
+      const result = await this.#confirm.requestSignature(chainId, payload);
+
+      if (!result.signature) {
+        throw new Error('Failed to get signature');
+      }
+
+      signature = result.signature;
+    } catch (error: unknown) {
+      this.log(
+        `Failed to get signature: ${
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!signature) {
+      throw new Error('Failed to get signature');
+    }
+
+    return signature;
   }
 
   /**
@@ -335,7 +413,12 @@ export class SessionManager {
 
       // TODO add timeout
 
-      const result = await this.#confirm.signOperation(operation.url);
+      const result = await this.#confirm.signOperation(
+        operation.url.replace(
+          'https://identity.preview.onbeam.com',
+          this.#config.authUrl,
+        ),
+      );
 
       this.log(`Operation signed: ${result.confirmed}`);
 

@@ -62,7 +62,9 @@ export class BeamProvider implements Provider {
             chainId,
             'Connect to Beam SDK',
           );
-        } catch {
+        } catch (error: unknown) {
+          console.error(error);
+
           throw new JsonRpcError(
             ProviderErrorCode.UNAUTHORIZED,
             'Unauthorised - unable to get address',
@@ -84,9 +86,6 @@ export class BeamProvider implements Provider {
       }
 
       case 'eth_sendTransaction': {
-        // const { chainId } = await this.#rpcProvider.detectNetwork();
-        // const address = this.#accountAddress[chainId];
-
         return '';
 
         // const entityId = await this.#authManager.getUserId();
@@ -167,9 +166,35 @@ export class BeamProvider implements Provider {
           );
         }
 
-        // TODO implement signTypedData
-        return '';
+        const signature = await this.#sessionManager.requestSignature(
+          chainId,
+          request.params?.[1],
+        );
+
+        return signature;
       }
+
+      // TODO - implement personal_sign (SIWE)
+      // case 'personal_sign': {
+      //   const { chainId } = await this.#rpcProvider.detectNetwork();
+
+      //   if (!this.#accountAddress[chainId]) {
+      //     throw new JsonRpcError(
+      //       ProviderErrorCode.UNAUTHORIZED,
+      //       'Unauthorised - call eth_requestAccounts first',
+      //     );
+      //   }
+
+      //   // @ts-ignore
+      //   const [message] = request.params;
+
+      //   const signature = await this.#sessionManager.signMessage(
+      //     chainId,
+      //     message,
+      //   );
+
+      //   return signature;
+      // }
 
       case 'eth_chainId': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
@@ -194,7 +219,7 @@ export class BeamProvider implements Provider {
       default: {
         throw new JsonRpcError(
           ProviderErrorCode.UNSUPPORTED_METHOD,
-          'Method not supported',
+          `${request.method} - Method not supported`,
         );
       }
     }
