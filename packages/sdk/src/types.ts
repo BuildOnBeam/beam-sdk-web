@@ -1,5 +1,3 @@
-import { BeamProvider } from './lib/provider';
-
 export enum Environment {
   MAINNET = 'mainnet',
   TESTNET = 'testnet',
@@ -19,5 +17,3 @@ export type Session = {
   startTime?: string | null;
   endTime?: string | null;
 };
-
-export { BeamProvider };

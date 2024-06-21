@@ -86,56 +86,17 @@ export class BeamProvider implements Provider {
       }
 
       case 'eth_sendTransaction': {
-        return '';
+        const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        // const entityId = await this.#authManager.getUserId();
+        if (!this.#accountAddress[chainId]) {
+          throw new JsonRpcError(
+            ProviderErrorCode.UNAUTHORIZED,
+            'Unauthorised - call eth_requestAccounts first',
+          );
+        }
 
-        // if (!address) {
-        //   throw new JsonRpcError(
-        //     ProviderErrorCode.UNAUTHORIZED,
-        //     'Unauthorised - call eth_requestAccounts first',
-        //   );
-        // }
-
-        // const { to, value, data } = request.params?.[0] ?? {};
-
-        // const abi = parseAbi([
-        //   'function setApprovalForAll(address to, bool approved)',
-        // ]);
-
-        // const result = decodeFunctionData({
-        //   abi,
-        //   data,
-        // });
-
-        // const operationPayload = {
-        //   chainId,
-        //   interactions: [
-        //     {
-        //       functionName: result.functionName,
-        //       functionArgs: result.args,
-        //       contractAddress: to,
-        //       value,
-        //     },
-        //   ],
-        //   sponsor: false,
-        // };
-
-        // const operation = await this.api.createUserTransaction(
-        //   entityId,
-        //   // @ts-ignore
-        //   operationPayload,
-        // );
-
-        // if (!operation) {
-        //   throw new Error('Failed to create user transaction.');
-        // }
-
-        // const signed = await this.#sessionManager.signOperation(
-        //   entityId,
-        //   operation.id,
-        //   chainId,
-        // );
+        // @ts-ignore
+        const [transaction] = request.params;
 
         // if (!signed) {
         //   throw new JsonRpcError(
@@ -144,7 +105,22 @@ export class BeamProvider implements Provider {
         //   );
         // }
 
-        // return operation.transactions[0].hash;
+        try {
+          const operation = await this.#sessionManager.sendTransaction(
+            this.#accountAddress[chainId],
+            chainId,
+            transaction,
+          );
+
+          return operation.transactions[0].hash;
+        } catch (error: unknown) {
+          console.error(error);
+
+          throw new JsonRpcError(
+            ProviderErrorCode.UNAUTHORIZED,
+            'Unauthorised - unable to send transaction',
+          );
+        }
       }
 
       case 'eth_accounts': {
@@ -174,27 +150,25 @@ export class BeamProvider implements Provider {
         return signature;
       }
 
-      // TODO - implement personal_sign (SIWE)
-      // case 'personal_sign': {
-      //   const { chainId } = await this.#rpcProvider.detectNetwork();
+      // SIWE
+      case 'personal_sign': {
+        const { chainId } = await this.#rpcProvider.detectNetwork();
 
-      //   if (!this.#accountAddress[chainId]) {
-      //     throw new JsonRpcError(
-      //       ProviderErrorCode.UNAUTHORIZED,
-      //       'Unauthorised - call eth_requestAccounts first',
-      //     );
-      //   }
+        if (!this.#accountAddress[chainId]) {
+          throw new JsonRpcError(
+            ProviderErrorCode.UNAUTHORIZED,
+            'Unauthorised - call eth_requestAccounts first',
+          );
+        }
 
-      //   // @ts-ignore
-      //   const [message] = request.params;
+        const [message] = request.params as [`0x${string}` | Uint8Array];
 
-      //   const signature = await this.#sessionManager.signMessage(
-      //     chainId,
-      //     message,
-      //   );
+        const signature = await this.#sessionManager.signMessage(chainId, {
+          raw: message,
+        });
 
-      //   return signature;
-      // }
+        return signature;
+      }
 
       case 'eth_chainId': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
@@ -356,5 +330,11 @@ export class BeamProvider implements Provider {
     listener: (...args: any[]) => void,
   ): void {
     this.#eventEmitter.removeListener(event, listener);
+  }
+
+  public disconnect() {
+    this.#sessionManager.clearSession();
+    this.#accountAddress = {};
+    this.#eventEmitter.emit('disconnect');
   }
 }

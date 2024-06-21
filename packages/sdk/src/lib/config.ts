@@ -32,6 +32,9 @@ export class BeamConfiguration {
         this.apiUrl = 'https://api.preview.onbeam.com';
         this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
         break;
+
+      default:
+        throw new Error(`Invalid Beam environment: ${this.environment}`);
     }
   }
 }

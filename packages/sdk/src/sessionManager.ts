@@ -13,6 +13,7 @@ import {
   ConfirmOperationRequestStatus,
   ConfirmOperationRequestTransactionsItem,
   GenerateSessionRequestResponse,
+  WebConnectionTransactionInputInteractionsItem,
 } from './lib/api/beam.types.generated';
 import { BeamConfiguration } from './lib/config';
 import { ConfirmationScreen } from './lib/confirmation';
@@ -279,6 +280,40 @@ export class SessionManager {
     return signature;
   }
 
+  async sendTransaction(
+    accountAddress: string,
+    chainId: number,
+    interaction: WebConnectionTransactionInputInteractionsItem,
+  ) {
+    let operation: CommonOperationResponse | null = null;
+
+    try {
+      this.log('Sending transaction');
+
+      const result = await this.api.createTransactionForAddress({
+        accountAddress,
+        chainId,
+        interactions: [interaction],
+      });
+
+      if (result) operation = result;
+    } catch (err: unknown) {
+      this.log(
+        `Failed to execute step: ${
+          err instanceof Error ? err.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!operation) {
+      this.log('Failed to get operation');
+
+      throw new Error('Failed to get operation');
+    }
+
+    return this.signOperationUsingBrowser(operation);
+  }
+
   /**
    * Sign an operation by its id
    * @param entityId
@@ -402,7 +437,7 @@ export class SessionManager {
 
     if (error) throw new Error(error);
 
-    return true;
+    return this.api.getOperation(operation.id);
   }
 
   private async signOperationUsingBrowser(operation: CommonOperationResponse) {
@@ -437,7 +472,7 @@ export class SessionManager {
 
     if (error) throw new Error(error);
 
-    return true;
+    return this.api.getOperation(operation.id);
   }
 
   /**

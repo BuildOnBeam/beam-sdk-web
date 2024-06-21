@@ -1,6 +1,6 @@
 import { Hex } from 'viem';
 
-export const BEAM_EVENT_TYPE = 'beam_confirmation';
+export const BEAM_EVENT_TYPE = 'beam_sdk_event';
 
 export enum SendMessage {
   REQUEST_SIGNATURE_START = 'request_signature_start',
