@@ -12,11 +12,13 @@ interface StorageContract<T> {
 }
 
 export enum StorageKey {
+  ACCESS_TOKEN = 'beam-token',
   SESSION = 'beam-session',
   SIGNING_KEY = 'beam-signing-key',
 }
 
 export interface StorageKeys {
+  [StorageKey.ACCESS_TOKEN]: string | null;
   [StorageKey.SESSION]: Session | null;
   [StorageKey.SIGNING_KEY]: Hex | null;
 }

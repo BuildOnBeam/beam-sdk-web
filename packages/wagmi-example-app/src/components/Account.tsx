@@ -1,0 +1,60 @@
+import { useState } from 'react';
+import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from 'wagmi';
+import { beamClient } from '../main';
+// import MintERC20 from './Actions/MintERC20';
+import SetApprovalForAll from './Actions/SetApprovalForAll';
+
+export function Account() {
+  const { address, connector } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { data: ensName } = useEnsName({ address });
+  const { data: ensAvatar } = useEnsAvatar({ name: ensName! });
+  const [disconnectTxt, setDisconnectTxt] = useState('Disconnect');
+
+  const formattedAddress = formatAddress(address);
+
+  return (
+    <div className="row">
+      <div className="inline">
+        {ensAvatar ? (
+          <img alt="ENS Avatar" className="avatar" src={ensAvatar} />
+        ) : (
+          <div className="avatar" />
+        )}
+        <div className="stack">
+          {address && (
+            <div className="text">
+              {ensName ? `${ensName} (${formattedAddress})` : formattedAddress}
+            </div>
+          )}
+          <div className="subtext">
+            Connected to {connector?.name} Connector
+          </div>
+        </div>
+      </div>
+      <button
+        className="button"
+        onClick={async () => {
+          setDisconnectTxt('Disconnecting ...');
+
+          if (connector?.name.includes('Beam')) {
+            await beamClient.clearSession();
+          }
+
+          disconnect();
+        }}
+        type="button"
+      >
+        {disconnectTxt}
+      </button>
+
+      {/* <MintERC20 /> */}
+      <SetApprovalForAll />
+    </div>
+  );
+}
+
+function formatAddress(address?: string) {
+  if (!address) return null;
+  return `${address.slice(0, 6)}…${address.slice(38, 42)}`;
+}

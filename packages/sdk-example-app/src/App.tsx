@@ -41,6 +41,7 @@ const App = () => {
 
       try {
         const user = await client.current.api.getUser(entityId);
+
         if (user) {
           setUser(user);
         }
@@ -333,7 +334,9 @@ const App = () => {
 
           <div className="w-full max-w-4xl mx-auto px-4 md:px-6 pt-2 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Assets</h2>
+              <h2 className="text-xl font-semibold">
+                Assets {assets.length > 0 ? `(${assets.length})` : ''}
+              </h2>
 
               <button id="mintAssetButton" type="button" onClick={mintAsset}>
                 Mint

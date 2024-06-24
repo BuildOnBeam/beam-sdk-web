@@ -33,15 +33,26 @@ async function search(options: Options) {
 }
 
 async function main() {
-  await search({
-    target: './src/lib/api/beam.api.generated.ts',
-    jobs: [
-      {
-        pattern: "from './'",
-        replace: "from './beam.types.generated'",
-      },
-    ],
-  });
+  await Promise.all([
+    search({
+      target: './src/lib/api/beam.connection-api.generated.ts',
+      jobs: [
+        {
+          pattern: "from './'",
+          replace: "from './beam.connection-api.types.generated'",
+        },
+      ],
+    }),
+    search({
+      target: './src/lib/api/beam.player-api.generated.ts',
+      jobs: [
+        {
+          pattern: "from './'",
+          replace: "from './beam.player-api.types.generated'",
+        },
+      ],
+    }),
+  ]);
 }
 
 main();

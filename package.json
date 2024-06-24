@@ -6,7 +6,8 @@
   "license": "ISC",
   "scripts": {
     "sdk": "pnpm --filter @onbeam/sdk",
-    "example": "pnpm --filter beam-sdk-example-app",
+    "sdk-example": "pnpm --filter beam-sdk-example-app",
+    "wagmi-example": "pnpm --filter beam-wagmi-example-app",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky",
     "validate:fix": "biome check . --write --unsafe",

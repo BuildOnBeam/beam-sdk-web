@@ -1,7 +1,12 @@
 import { BeamConfiguration } from '../config';
 // import Overlay from "../overlay";
 import { openPopupCenter } from './popup';
-import { BEAM_EVENT_TYPE, ConfirmationResult, ReceiveMessage } from './types';
+import {
+  BEAM_EVENT_TYPE,
+  ConfirmationResult,
+  ReceiveMessage,
+  RequestConnectionResult,
+} from './types';
 
 const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
 const CONFIRMATION_WINDOW_HEIGHT = 720;
@@ -31,6 +36,47 @@ export default class ConfirmationScreen {
   constructor(config: BeamConfiguration) {
     this.config = config;
     this.overlayClosed = false;
+  }
+
+  requestConnection(url: string): Promise<RequestConnectionResult> {
+    return new Promise((resolve, reject) => {
+      const messageHandler = ({ data, origin }: MessageEvent) => {
+        if (
+          origin !== this.config.authUrl ||
+          data.eventType !== BEAM_EVENT_TYPE
+        ) {
+          return;
+        }
+
+        switch (data.messageType as ReceiveMessage) {
+          case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_CONFIRMED: {
+            this.closeWindow();
+            const { signature, address, ownerAddress } = data.payload;
+            resolve({
+              signature,
+              address,
+              ownerAddress,
+            });
+            break;
+          }
+          case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_ERROR: {
+            this.closeWindow();
+            reject(new Error('Error during connection request'));
+            break;
+          }
+          case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_REJECTED: {
+            this.closeWindow();
+            reject(new Error('User rejected connection request'));
+            break;
+          }
+          default:
+            this.closeWindow();
+            reject(new Error('Unsupported message type'));
+        }
+      };
+      window.addEventListener('message', messageHandler);
+      this.showConfirmationScreen(url, messageHandler, resolve);
+    });
   }
 
   requestSession(url: string): Promise<ConfirmationResult> {

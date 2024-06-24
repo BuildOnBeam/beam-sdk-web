@@ -1,32 +1,45 @@
-import { Hex, serializeSignature } from 'viem';
-import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
-import { getPlayerAPI } from './lib/api/beam.api.generated';
-import {
-  CommonOperationResponse,
-  CommonOperationResponseStatus,
-  ConfirmOperationRequestStatus,
-  ConfirmOperationRequestTransactionsItem,
-  GenerateSessionRequestResponse,
-} from './lib/api/beam.types.generated';
 import { BeamConfiguration } from './lib/config';
-import { ConfirmationScreen } from './lib/confirmation';
-import { StorageKey, StorageKeys, StorageService } from './lib/storage';
-import { ClientConfig, Session } from './types';
-import { isSessionOwnedBy, isSessionValid } from './utils';
+import {
+  BeamProvider,
+  announceProvider,
+  beamProviderInfo,
+} from './lib/provider';
+import { StorageKeys, StorageService } from './lib/storage';
+import { SessionManager } from './sessionManager';
+import { ClientConfig } from './types';
+import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 
 export class BeamClient {
   readonly #config: BeamConfiguration;
-  readonly #confirm: ConfirmationScreen;
 
-  #storage = new StorageService<StorageKeys>(window.sessionStorage);
+  readonly #sessionManager: SessionManager;
 
   readonly api = getPlayerAPI();
+
+  #storage: StorageService<StorageKeys>;
 
   constructor(config: ClientConfig) {
     this.#config = new BeamConfiguration(config);
 
-    this.#confirm = new ConfirmationScreen(this.#config);
+    this.#storage = new StorageService<StorageKeys>(
+      typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage
+        : // TODO - implement a fallback for node
+          {
+            getItem: (_key: string) => null,
+            setItem: (_key: string, _value: string) => {},
+            removeItem: (_key: string) => {},
+            key: (_index: number) => null,
+            clear: () => {},
+            length: 0,
+          },
+    );
+
+    this.#sessionManager = new SessionManager({
+      config: this.#config,
+      storage: this.#storage,
+    });
 
     AXIOS_INSTANCE.interceptors.request.use((config) => {
       config.baseURL = this.#config.apiUrl;
@@ -35,8 +48,48 @@ export class BeamClient {
     });
   }
 
+  /**
+   * Override the default storage. The storage should implement the Storage interface, and be compliant with
+   * both browser and node environments.
+   * @param storage
+   */
   public setStorage(storage: Storage) {
     this.#storage = new StorageService<StorageKeys>(storage);
+  }
+
+  /**
+   * Instantiate a new provider
+   * @param options
+   * @returns EIP6963Provider
+   */
+  public connectProvider(
+    options: {
+      announceProvider: boolean;
+    } = {
+      announceProvider: true,
+    },
+  ) {
+    const provider = new BeamProvider({
+      config: this.#config,
+      sessionManager: this.#sessionManager,
+    });
+
+    if (options?.announceProvider) {
+      announceProvider({
+        info: beamProviderInfo,
+        provider,
+      });
+    }
+
+    return provider;
+  }
+
+  public verifyOwnership(
+    address: string,
+    ownerAddress: string,
+    chainId: number,
+  ) {
+    return this.#sessionManager.verifyOwnership(address, ownerAddress, chainId);
   }
 
   /**
@@ -47,19 +100,7 @@ export class BeamClient {
    * @returns Session
    */
   public async getActiveSession(entityId: string, chainId: number) {
-    const { session } = await this.getActiveSessionAndKeys(entityId, chainId);
-
-    if (!session) {
-      this.log('Unable to get active session');
-
-      this.#storage.clear();
-
-      throw new Error('No active session found');
-    }
-
-    this.log('Got active session');
-
-    return session;
+    return this.#sessionManager.getActiveSession(entityId, chainId);
   }
 
   /**
@@ -70,73 +111,7 @@ export class BeamClient {
    * @returns Session
    */
   public async createSession(entityId: string, chainId: number) {
-    let { session, key } = await this.getActiveSessionAndKeys(
-      entityId,
-      chainId,
-    );
-
-    if (session) {
-      this.log('Already has an active session, ending early');
-
-      throw new Error('Already has an active session');
-    }
-
-    this.log('Creating a new session');
-
-    key = this.getOrCreateSigningKey(true);
-
-    let sessionRequest: GenerateSessionRequestResponse | null = null;
-
-    try {
-      const account = privateKeyToAccount(key);
-
-      sessionRequest = await this.api.createSessionRequest(entityId, {
-        chainId,
-        address: account.address,
-      });
-    } catch (error: unknown) {
-      this.log(
-        `Failed to create session request: ${
-          error instanceof Error ? error.message : 'Unknown error.'
-        }`,
-      );
-    }
-
-    if (!sessionRequest) {
-      this.log('Failed to create session request');
-
-      throw new Error('Failed to create session request');
-    }
-
-    this.log(`Created session request: ${sessionRequest.id}`);
-
-    let error: string | null = null;
-
-    try {
-      this.log(`Confirming session request: ${sessionRequest.id}`);
-
-      // TODO add timeout
-
-      const result = await this.#confirm.requestSession(sessionRequest.url);
-
-      this.log(`Session request confirmed: ${result.confirmed}`);
-
-      if (!result.confirmed) {
-        throw new Error('Unable to confirm session request');
-      }
-    } catch (err: unknown) {
-      this.log(
-        `Failed to confirm session request: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
-
-      error = err instanceof Error ? err.message : 'Unknown error.';
-    }
-
-    if (error) throw new Error(error);
-
-    return this.getActiveSession(entityId, chainId);
+    return this.#sessionManager.createSession(entityId, chainId);
   }
 
   /**
@@ -145,7 +120,7 @@ export class BeamClient {
    * @param chainId
    */
   public async clearSession() {
-    this.#storage.clear();
+    this.#sessionManager.clearSession();
   }
 
   /**
@@ -162,219 +137,17 @@ export class BeamClient {
     chainId: number,
     useBrowserFallback = false,
   ) {
-    const { session, key } = await this.getActiveSessionAndKeys(
+    return this.#sessionManager.signOperation(
       entityId,
+      operationId,
       chainId,
-    );
-
-    this.log('Retrieving operation');
-
-    let operation: CommonOperationResponse | null = null;
-
-    try {
-      const result = await this.api.getOperation(operationId);
-
-      if (result) operation = result;
-    } catch (error: unknown) {
-      this.log(
-        `Failed to get operation: ${
-          error instanceof Error ? error.message : 'Unknown error.'
-        }`,
-      );
-    }
-
-    if (!operation) {
-      this.log('Failed to get operation');
-
-      throw new Error('Failed to get operation');
-    }
-
-    if (session && key) {
-      return this.signOperationUsingSession(operation, entityId, key);
-    }
-
-    if (useBrowserFallback) {
-      return this.signOperationUsingBrowser(operation);
-    }
-
-    throw new Error(
-      'Unable to sign operation, no valid session or key found and no browser fallback enabled.',
+      useBrowserFallback,
     );
   }
 
-  private async signOperationUsingSession(
-    operation: CommonOperationResponse,
-    entityId: string,
-    privateKey: Hex,
-  ) {
-    if (!operation.transactions.length) {
-      throw new Error('No transactions found in operation');
-    }
-
-    let error: string | null = null;
-
-    const transactions: ConfirmOperationRequestTransactionsItem[] = [];
-
-    for (const tx of operation.transactions) {
-      try {
-        const signature = serializeSignature(
-          await sign({
-            hash: tx.hash as Hex,
-            privateKey,
-          }),
-        );
-
-        transactions.push({
-          id: tx.id,
-          signature,
-        });
-      } catch (err: unknown) {
-        this.log(
-          `Failed to sign transaction: ${
-            err instanceof Error ? err.message : 'Unknown error.'
-          }`,
-        );
-
-        error = err instanceof Error ? err.message : 'Unknown error.';
-      }
-    }
-
-    if (error) throw new Error(error);
-
-    try {
-      const result = await this.api.processOperation(operation.id, {
-        entityId,
-        gameId: operation.gameId,
-        status: ConfirmOperationRequestStatus.Pending,
-        transactions,
-      });
-
-      const hasFailed =
-        result.status !== CommonOperationResponseStatus.Executed &&
-        result.status !== CommonOperationResponseStatus.Signed &&
-        result.status !== CommonOperationResponseStatus.Pending;
-
-      if (hasFailed) {
-        throw new Error(`Operation failed with status: ${result.status}`);
-      }
-
-      this.log(`Operation signed: ${result.status}`);
-    } catch (err: unknown) {
-      this.log(
-        `Failed to sign operation: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
-
-      error = err instanceof Error ? err.message : 'Unknown error.';
-    }
-
-    if (error) throw new Error(error);
-
-    return true;
-  }
-
-  private async signOperationUsingBrowser(operation: CommonOperationResponse) {
-    let error: string | null = null;
-
-    try {
-      this.log(`Signing operation using browser: ${operation.id}`);
-
-      // TODO add timeout
-
-      const result = await this.#confirm.signOperation(operation.url);
-
-      this.log(`Operation signed: ${result.confirmed}`);
-
-      if (!result.confirmed) {
-        throw new Error('Unable to sign operation');
-      }
-    } catch (err: unknown) {
-      this.log(
-        `Failed to sign operation: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
-
-      error = err instanceof Error ? err.message : 'Unknown error.';
-    }
-
-    if (error) throw new Error(error);
-
-    return true;
-  }
-
   /**
-   * Get active session and keys. If a session is not valid, it will try to get a new one. If that fails, only a key will be returned.
-   * @param entityId
-   * @param chainId
-   * @returns
+   * Base64 encoded SVG Beam logo
    */
-  private async getActiveSessionAndKeys(entityId: string, chainId: number) {
-    let session: Session | null = null;
-
-    const sessionInfo = this.#storage.get(StorageKey.SESSION);
-
-    if (sessionInfo) {
-      session = sessionInfo;
-    }
-
-    const key = this.getOrCreateSigningKey();
-
-    if (!isSessionValid(session)) {
-      const account = privateKeyToAccount(key);
-
-      try {
-        const result = await this.api.getActiveSession(
-          entityId,
-          account.address,
-          {
-            chainId,
-          },
-        );
-
-        if (result) session = result as unknown as Session;
-      } catch (error: unknown) {
-        this.log(
-          `Failed to get active session: ${
-            error instanceof Error ? error.message : 'Unknown error.'
-          }`,
-        );
-      }
-    }
-
-    if (isSessionValid(session) && isSessionOwnedBy(session, key)) {
-      this.#storage.set(StorageKey.SESSION, session);
-
-      return { session, key };
-    }
-
-    this.#storage.remove(StorageKey.SESSION);
-
-    return { session: null, key };
-  }
-
-  /**
-   * Get or create a signing key
-   * @param refresh
-   * @returns
-   */
-  private getOrCreateSigningKey(refresh = false) {
-    if (!refresh) {
-      const stored = this.#storage.get(StorageKey.SIGNING_KEY);
-      if (stored) return stored;
-    }
-
-    const key = generatePrivateKey();
-    this.#storage.set(StorageKey.SIGNING_KEY, key);
-
-    return key;
-  }
-
-  private log(message: string) {
-    if (!this.#config.debug) return;
-
-    // biome-ignore lint/suspicious/noConsoleLog: allowed for debugging
-    console.log(message);
-  }
+  static Icon =
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAzMCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTAgNEMwIDEuNzkwODYgMS43OTA4NiAwIDQgMEgyNkMyOC4yMDkxIDAgMzAgMS43OTA4NiAzMCA0VjcuNUgwVjRaIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfMV82NCkiLz4KPHBhdGggZD0iTTAgMjIuNUgzMFYyNkMzMCAyOC4yMDkxIDI4LjIwOTEgMzAgMjYgMzBINEMxLjc5MDg2IDMwIDAgMjguMjA5MSAwIDI2VjIyLjVaIiBmaWxsPSJ1cmwoI3BhaW50MV9saW5lYXJfMV82NCkiLz4KPHBhdGggZD0iTTAgNy41SDMwVjE1SDBWNy41WiIgZmlsbD0idXJsKCNwYWludDJfbGluZWFyXzFfNjQpIi8+CjxwYXRoIGQ9Ik0wIDcuNUgzMFYxNUgwVjcuNVoiIGZpbGw9InVybCgjcGFpbnQzX2xpbmVhcl8xXzY0KSIvPgo8cGF0aCBkPSJNMCAxNUgzMFYyMi41SDBWMTVaIiBmaWxsPSJ1cmwoI3BhaW50NF9saW5lYXJfMV82NCkiLz4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl8xXzY0IiB4MT0iMTUuMTA3NyIgeTE9IjMuOTM3NSIgeDI9IjE1LjEwNjUiIHkyPSIxMi4zMDQ3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiNCQkRCRkYiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyODEyNSIgc3RvcC1jb2xvcj0iIzEzOUVERCIvPgo8c3RvcCBvZmZzZXQ9IjAuNTk4OTU4IiBzdG9wLWNvbG9yPSIjQjlGN0VBIi8+CjwvbGluZWFyR3JhZGllbnQ+CjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQxX2xpbmVhcl8xXzY0IiB4MT0iMTMuNzEwMSIgeTE9IjI2LjQzNzUiIHgyPSIxMy43MDkiIHkyPSIzNC44MDQ3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiNCQkZGQ0EiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyODEyNSIgc3RvcC1jb2xvcj0iIzQ4REQxMyIvPgo8c3RvcCBvZmZzZXQ9IjAuNTk4OTU4IiBzdG9wLWNvbG9yPSIjMDA4ODA1Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQyX2xpbmVhcl8xXzY0IiB4MT0iMTMuNjgzNyIgeTE9IjguNDI1OTEiIHgyPSIxMy42ODI4IiB5Mj0iMTUuMzAxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxzdG9wIHN0b3AtY29sb3I9IiNGRjZBOUEiLz4KPHN0b3Agb2Zmc2V0PSIwLjUyOTgxOSIgc3RvcC1jb2xvcj0iI0ZGNTU0NCIvPgo8c3RvcCBvZmZzZXQ9IjAuOTU1NTQ1IiBzdG9wLWNvbG9yPSIjRTYzRTMzIi8+CjwvbGluZWFyR3JhZGllbnQ+CjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQzX2xpbmVhcl8xXzY0IiB4MT0iMTMuMzcyOCIgeTE9IjExLjQzNzUiIHgyPSIxMy4zNzE4IiB5Mj0iMTkuODA0NyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjRkY2QjZCIi8+CjxzdG9wIG9mZnNldD0iMC4zMjgxMjUiIHN0b3AtY29sb3I9IiNGRTE0MTQiLz4KPHN0b3Agb2Zmc2V0PSIwLjU5ODk1OCIgc3RvcC1jb2xvcj0iIzhFMDkwMCIvPgo8L2xpbmVhckdyYWRpZW50Pgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50NF9saW5lYXJfMV82NCIgeDE9IjEzLjg5ODYiIHkxPSIxOC45Mzc1IiB4Mj0iMTMuODk3NSIgeTI9IjI3LjMwNDciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iI0YxRTg2OSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzI4MTI1IiBzdG9wLWNvbG9yPSIjRkVBNTE0Ii8+CjxzdG9wIG9mZnNldD0iMC41OTg5NTgiIHN0b3AtY29sb3I9IiNGRjQ1MzkiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K';
 }
