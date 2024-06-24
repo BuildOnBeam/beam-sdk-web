@@ -5,7 +5,7 @@
 ---
 
 # Beam Web SDK
-The Beam Web SDK is a Typescript library that allows you to easily integrate Beam into your website, application or web-based game. It provides a simple API to authenticate your users on Beam, manage sessions and sign transactions, and access the Beam API.
+The Beam Web SDK is a Typescript library that allows you to easily integrate Beam into your website, application or web-based game. It provides a simple API to authenticate your users on Beam, manage sessions and sign transactions, and access the Beam Player API.
 
 
 # Table of Contents
@@ -36,7 +36,14 @@ pnpm add @onbeam/sdk
 
 ## Creating a client
 
-TODO
+Start by creating a new instance of the Beam client, and configuring it with your API key:
+
+
+```typescript
+
+```
+
+Make sure your API key matches the environment you are working on. For example, if you are working on a development environment, use the development API key.
 
 ## Examples
 Look for the examples in the [examples](./packages/examples) folder.
