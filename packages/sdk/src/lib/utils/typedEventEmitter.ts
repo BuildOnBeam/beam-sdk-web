@@ -1,4 +1,5 @@
-import { EventEmitter } from 'node:events';
+// biome-ignore lint/style/useNodejsImportProtocol: `events` is added to dependencies but somehow ignored
+import { EventEmitter } from 'events';
 
 export default class TypedEventEmitter<TEvents extends Record<string, any>> {
   private emitter = new EventEmitter();

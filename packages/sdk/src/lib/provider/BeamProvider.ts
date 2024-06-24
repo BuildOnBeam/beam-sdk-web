@@ -1,7 +1,6 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { toHex } from 'viem';
 import { SessionManager } from '../../sessionManager';
-import { getPlayerAPI } from '../api/beam.api.generated';
 import { BeamConfiguration } from '../config';
 import TypedEventEmitter from '../utils/typedEventEmitter';
 import { JsonRpcError, ProviderErrorCode, RpcErrorCode } from './JsonRpcError';
@@ -14,6 +13,7 @@ import {
   ProviderEventMap,
   RequestArguments,
 } from './types';
+import { parseAndValidateTypedData } from './utils';
 
 export type BeamProviderInput = {
   config: BeamConfiguration;
@@ -29,10 +29,8 @@ export class BeamProvider implements Provider {
 
   readonly #rpcProvider: StaticJsonRpcProvider;
 
-  readonly api = getPlayerAPI();
-
   // Account abstractions per chainId
-  #accountAddress: Record<number, string> = {};
+  #accounts: Record<number, string> = {};
 
   public readonly isBeam: boolean = true;
 
@@ -51,34 +49,34 @@ export class BeamProvider implements Provider {
       case 'eth_requestAccounts': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        if (this.#accountAddress[chainId]) {
-          return [this.#accountAddress[chainId]];
+        if (this.#accounts[chainId]) {
+          return [this.#accounts[chainId]];
         }
 
         let address: string | null = null;
 
         try {
-          address = await this.#sessionManager.getAddress(
+          const result = await this.#sessionManager.connect(
             chainId,
             'Connect to Beam SDK',
           );
-        } catch (error: unknown) {
-          console.error(error);
 
+          if (result) address = result.address;
+        } catch (error: unknown) {
           throw new JsonRpcError(
-            ProviderErrorCode.UNAUTHORIZED,
-            'Unauthorised - unable to get address',
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
 
         if (!address) {
           throw new JsonRpcError(
             ProviderErrorCode.UNAUTHORIZED,
-            `Unauthorised - no wallet address found for chain: ${chainId}`,
+            `Unauthorised - no address found for chain: ${chainId}`,
           );
         }
 
-        this.#accountAddress[chainId] = address;
+        this.#accounts[chainId] = address;
 
         this.#eventEmitter.emit(ProviderEvent.ACCOUNTS_CHANGED, [address]);
 
@@ -88,7 +86,7 @@ export class BeamProvider implements Provider {
       case 'eth_sendTransaction': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        if (!this.#accountAddress[chainId]) {
+        if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
             ProviderErrorCode.UNAUTHORIZED,
             'Unauthorised - call eth_requestAccounts first',
@@ -98,27 +96,18 @@ export class BeamProvider implements Provider {
         // @ts-ignore
         const [transaction] = request.params;
 
-        // if (!signed) {
-        //   throw new JsonRpcError(
-        //     ProviderErrorCode.UNSUPPORTED_METHOD,
-        //     'Method not supported',
-        //   );
-        // }
-
         try {
           const operation = await this.#sessionManager.sendTransaction(
-            this.#accountAddress[chainId],
+            this.#accounts[chainId],
             chainId,
             transaction,
           );
 
-          return operation.transactions[0].hash;
+          return operation.transactions[0].transactionHash;
         } catch (error: unknown) {
-          console.error(error);
-
           throw new JsonRpcError(
-            ProviderErrorCode.UNAUTHORIZED,
-            'Unauthorised - unable to send transaction',
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to execute transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
       }
@@ -126,48 +115,64 @@ export class BeamProvider implements Provider {
       case 'eth_accounts': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        return this.#accountAddress[chainId]
-          ? [this.#accountAddress[chainId]]
-          : [];
+        return this.#accounts[chainId] ? [this.#accounts[chainId]] : [];
       }
 
       case 'eth_signTypedData':
       case 'eth_signTypedData_v4': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        if (!this.#accountAddress[chainId]) {
+        if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
             ProviderErrorCode.UNAUTHORIZED,
             'Unauthorised - call eth_requestAccounts first',
           );
         }
 
-        const signature = await this.#sessionManager.requestSignature(
-          chainId,
-          request.params?.[1],
-        );
+        const data = parseAndValidateTypedData(request.params?.[1], chainId);
 
-        return signature;
+        try {
+          const signature = await this.#sessionManager.signTransaction(
+            chainId,
+            this.#accounts[chainId],
+            data,
+          );
+
+          return signature;
+        } catch (error: unknown) {
+          throw new JsonRpcError(
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
       }
 
       // SIWE
       case 'personal_sign': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
-        if (!this.#accountAddress[chainId]) {
+        if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
             ProviderErrorCode.UNAUTHORIZED,
             'Unauthorised - call eth_requestAccounts first',
           );
         }
+        try {
+          const [message] = request.params as [`0x${string}` | Uint8Array];
 
-        const [message] = request.params as [`0x${string}` | Uint8Array];
+          const signature = await this.#sessionManager.signTransaction(
+            chainId,
+            this.#accounts[chainId],
+            message,
+          );
 
-        const signature = await this.#sessionManager.signMessage(chainId, {
-          raw: message,
-        });
-
-        return signature;
+          return signature;
+        } catch (error: unknown) {
+          throw new JsonRpcError(
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
       }
 
       case 'eth_chainId': {
@@ -334,7 +339,7 @@ export class BeamProvider implements Provider {
 
   public disconnect() {
     this.#sessionManager.clearSession();
-    this.#accountAddress = {};
+    this.#accounts = {};
     this.#eventEmitter.emit('disconnect');
   }
 }

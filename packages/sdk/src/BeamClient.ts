@@ -8,7 +8,7 @@ import {
 import { StorageKeys, StorageService } from './lib/storage';
 import { SessionManager } from './sessionManager';
 import { ClientConfig } from './types';
-import { getPlayerAPI } from './lib/api/beam.api.generated';
+import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 
 export class BeamClient {
   readonly #config: BeamConfiguration;
@@ -82,6 +82,14 @@ export class BeamClient {
     }
 
     return provider;
+  }
+
+  public verifyOwnership(
+    address: string,
+    ownerAddress: string,
+    chainId: number,
+  ) {
+    return this.#sessionManager.verifyOwnership(address, ownerAddress, chainId);
   }
 
   /**

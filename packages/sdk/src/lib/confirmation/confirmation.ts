@@ -4,9 +4,8 @@ import { openPopupCenter } from './popup';
 import {
   BEAM_EVENT_TYPE,
   ConfirmationResult,
-  RequestConnectionResult,
   ReceiveMessage,
-  SendMessage,
+  RequestConnectionResult,
 } from './types';
 
 const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
@@ -61,8 +60,6 @@ export default class ConfirmationScreen {
             break;
           }
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_ERROR: {
-            // biome-ignore lint/suspicious/noConsoleLog: <explanation>
-            console.log('error', data.payload.error);
             this.closeWindow();
             reject(new Error('Error during connection request'));
             break;
@@ -142,61 +139,6 @@ export default class ConfirmationScreen {
           case ReceiveMessage.SIGN_OPERATION_REJECTED: {
             this.closeWindow();
             reject(new Error('User rejected operation signing'));
-            break;
-          }
-          default:
-            this.closeWindow();
-            reject(new Error('Unsupported message type'));
-        }
-      };
-      window.addEventListener('message', messageHandler);
-      this.showConfirmationScreen(url, messageHandler, resolve);
-    });
-  }
-
-  requestSignature(
-    chainId: number,
-    payload: any,
-  ): Promise<{ signature: string }> {
-    const url = `${this.config.authUrl}/sign-typed-data?chainId=${chainId}`;
-
-    return new Promise((resolve, reject) => {
-      const messageHandler = ({ data, origin }: MessageEvent) => {
-        if (
-          origin !== this.config.authUrl ||
-          data.eventType !== BEAM_EVENT_TYPE
-        ) {
-          return;
-        }
-
-        switch (data.messageType as ReceiveMessage) {
-          case ReceiveMessage.CONFIRMATION_WINDOW_READY: {
-            this.confirmationWindow?.postMessage(
-              {
-                eventType: BEAM_EVENT_TYPE,
-                messageType: SendMessage.REQUEST_SIGNATURE_START,
-                payload,
-              },
-              this.config.authUrl,
-            );
-            break;
-          }
-
-          case ReceiveMessage.REQUEST_SIGNATURE_CONFIRMED: {
-            this.closeWindow();
-            const { signature } = data.payload;
-            resolve({ signature });
-            break;
-          }
-          case ReceiveMessage.REQUEST_SIGNATURE_ERROR: {
-            console.error('error', data.payload.error);
-            this.closeWindow();
-            reject(new Error('Error during signature request'));
-            break;
-          }
-          case ReceiveMessage.REQUEST_SIGNATURE_REJECTED: {
-            this.closeWindow();
-            reject(new Error('User rejected signature request'));
             break;
           }
           default:

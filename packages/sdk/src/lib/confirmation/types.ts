@@ -2,10 +2,6 @@ import { Hex } from 'viem';
 
 export const BEAM_EVENT_TYPE = 'beam_sdk_event';
 
-export enum SendMessage {
-  REQUEST_SIGNATURE_START = 'request_signature_start',
-}
-
 export enum ReceiveMessage {
   CONFIRMATION_WINDOW_READY = 'confirmation_window_ready',
 
@@ -16,10 +12,6 @@ export enum ReceiveMessage {
   SIGN_OPERATION_CONFIRMED = 'sign_operation_confirmed',
   SIGN_OPERATION_ERROR = 'sign_operation_error',
   SIGN_OPERATION_REJECTED = 'sign_operation_rejected',
-
-  REQUEST_SIGNATURE_CONFIRMED = 'request_signature_confirmed',
-  REQUEST_SIGNATURE_ERROR = 'request_signature_error',
-  REQUEST_SIGNATURE_REJECTED = 'request_signature_rejected',
 
   REQUEST_MESSAGE_SIGNATURE_CONFIRMED = 'request_message_signature_confirmed',
   REQUEST_MESSAGE_SIGNATURE_ERROR = 'request_message_signature_error',

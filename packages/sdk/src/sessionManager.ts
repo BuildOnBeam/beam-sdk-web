@@ -1,25 +1,24 @@
-import {
-  Hex,
-  SignableMessage,
-  hashMessage,
-  serializeSignature,
-  verifyMessage,
-} from 'viem';
+import { Hex, hashMessage, serializeSignature, verifyMessage } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
-import { getPlayerAPI } from './lib/api/beam.api.generated';
+import { getPlayerAPI } from './lib/api/beam.player-api.generated';
+import { getConnectionAPI } from './lib/api/beam.connection-api.generated';
 import {
   CommonOperationResponse,
   CommonOperationResponseStatus,
   ConfirmOperationRequestStatus,
   ConfirmOperationRequestTransactionsItem,
   GenerateSessionRequestResponse,
-  WebConnectionTransactionInputInteractionsItem,
-} from './lib/api/beam.types.generated';
+} from './lib/api/beam.player-api.types.generated';
 import { BeamConfiguration } from './lib/config';
 import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
+import {
+  CreateOperationInputOperationProcessing,
+  CreateOperationInputTransactionsItemType,
+  CreateTransactionInputInteractionsItem,
+} from './lib/api/beam.connection-api.types.generated';
 
 export type SessionManagerInput = {
   config: BeamConfiguration;
@@ -33,6 +32,8 @@ export class SessionManager {
 
   readonly #storage: StorageService<StorageKeys>;
 
+  readonly #connectionApi = getConnectionAPI();
+
   readonly api = getPlayerAPI();
 
   constructor({ config, storage }: SessionManagerInput) {
@@ -40,6 +41,66 @@ export class SessionManager {
     this.#storage = storage;
 
     this.#confirm = new ConfirmationScreen(this.#config);
+  }
+
+  /**
+   * Acquire the users address by connecting to their wallet
+   * @param chainId
+   * @param message
+   * @returns
+   */
+  async connect(chainId: number, message: string) {
+    let address: string | null = null;
+
+    try {
+      const connection = await this.#connectionApi.getMessageSignatureUrl({
+        chainId,
+        message: hashMessage(message) as Hex,
+      });
+
+      const result = await this.#confirm.requestConnection(
+        connection.url.replace(
+          'https://identity.preview.onbeam.com',
+          this.#config.authUrl,
+        ),
+      );
+
+      const verified = await verifyMessage({
+        message,
+        signature: result.signature as Hex,
+        address: result.ownerAddress,
+      });
+
+      if (!verified) {
+        throw new Error('Failed to verify signature');
+      }
+
+      if (result.address) address = result.address;
+    } catch (error: unknown) {
+      this.log(
+        `Failed to get address: ${
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!address) {
+      throw new Error('Failed to get address');
+    }
+
+    return { address };
+  }
+
+  async verifyOwnership(
+    address: string,
+    ownerAddress: string,
+    chainId: number,
+  ) {
+    return this.#connectionApi.verifyOwnership({
+      accountAddress: address,
+      ownerAddress,
+      chainId,
+    });
   }
 
   /**
@@ -156,141 +217,87 @@ export class SessionManager {
     this.#storage.clear();
   }
 
-  async getAddress(chainId: number, message: string) {
-    let address: string | null = null;
-
-    try {
-      const connection = await this.api.generateWebConnection({
-        chainId,
-        message: hashMessage(message) as Hex,
-      });
-
-      const result = await this.#confirm.requestConnection(
-        connection.url.replace(
-          'https://identity.preview.onbeam.com',
-          this.#config.authUrl,
-        ),
-      );
-
-      const verified = await verifyMessage({
-        message,
-        signature: result.signature as Hex,
-        address: result.ownerAddress,
-      });
-
-      if (!verified) {
-        throw new Error('Failed to verify signature');
-      }
-
-      if (result.address) {
-        address = result.address;
-      }
-    } catch (error: unknown) {
-      this.log(
-        `Failed to get address: ${
-          error instanceof Error ? error.message : 'Unknown error.'
-        }`,
-      );
-    }
-
-    if (!address) {
-      throw new Error('Failed to get address');
-    }
-
-    return address;
-  }
-
   /**
-   * Sign a message using the current local key
+   * Sign a transaction
    * @param message
    * @returns string
    */
-  async signMessage(chainId: number, message: SignableMessage) {
-    let signature: string | null = null;
+  async signTransaction(
+    chainId: number,
+    accountAddress: string,
+    // TODO type
+    data: unknown,
+  ) {
+    let operation: CommonOperationResponse | null = null;
 
     try {
-      const connection = await this.api.generateWebConnection({
+      this.log('Requesting signature');
+
+      const type =
+        typeof data === 'string'
+          ? CreateOperationInputTransactionsItemType.OpenfortTransaction
+          : CreateOperationInputTransactionsItemType.OpenfortReservoirOrder;
+
+      const result = await this.#connectionApi.createOperation({
+        accountAddress,
         chainId,
-        message: hashMessage(message) as Hex,
+        transactions: [
+          {
+            data,
+            type,
+          },
+        ],
+        operationProcessing: CreateOperationInputOperationProcessing.SignOnly,
       });
 
-      const result = await this.#confirm.requestConnection(
-        connection.url.replace(
-          'https://identity.preview.onbeam.com',
-          this.#config.authUrl,
-        ),
-      );
-
-      const verified = await verifyMessage({
-        message,
-        signature: result.signature as Hex,
-        address: result.ownerAddress,
-      });
-
-      if (!verified) {
-        throw new Error('Failed to verify signature');
-      }
-
-      if (result.signature) {
-        signature = result.signature;
-      }
-    } catch (error: unknown) {
+      if (result) operation = result;
+    } catch (err: unknown) {
       this.log(
-        `Failed to get signature: ${
-          error instanceof Error ? error.message : 'Unknown error.'
+        `Failed to sign transaction: ${
+          err instanceof Error ? err.message : 'Unknown error.'
         }`,
       );
     }
 
-    if (!signature) {
-      throw new Error('Failed to get signature');
+    if (!operation) {
+      this.log('Failed to get operation');
+
+      throw new Error('Failed to get operation');
     }
 
-    return signature;
+    operation = await this.signOperationUsingBrowser(operation);
+
+    if (operation.status !== CommonOperationResponseStatus.Signed) {
+      throw new Error(`Operation failed with status: ${operation.status}`);
+    }
+
+    const [transaction] = operation.transactions;
+
+    if (!transaction.signature) {
+      throw new Error('No signature found in transaction');
+    }
+
+    return transaction.signature;
   }
 
   /**
-   * Request a signature from the user
-   * @param message
-   * @returns string
+   * Execute a transaction
+   * @param accountAddress
+   * @param chainId
+   * @param interaction
+   * @returns
    */
-  async requestSignature(chainId: number, payload: string) {
-    let signature: string | null = null;
-
-    try {
-      const result = await this.#confirm.requestSignature(chainId, payload);
-
-      if (!result.signature) {
-        throw new Error('Failed to get signature');
-      }
-
-      signature = result.signature;
-    } catch (error: unknown) {
-      this.log(
-        `Failed to get signature: ${
-          error instanceof Error ? error.message : 'Unknown error.'
-        }`,
-      );
-    }
-
-    if (!signature) {
-      throw new Error('Failed to get signature');
-    }
-
-    return signature;
-  }
-
   async sendTransaction(
     accountAddress: string,
     chainId: number,
-    interaction: WebConnectionTransactionInputInteractionsItem,
+    interaction: CreateTransactionInputInteractionsItem,
   ) {
     let operation: CommonOperationResponse | null = null;
 
     try {
       this.log('Sending transaction');
 
-      const result = await this.api.createTransactionForAddress({
+      const result = await this.#connectionApi.createTransactionForAddress({
         accountAddress,
         chainId,
         interactions: [interaction],
