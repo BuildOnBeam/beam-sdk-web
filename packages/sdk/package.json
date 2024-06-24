@@ -1,6 +1,6 @@
 {
   "name": "@onbeam/sdk",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
   "files": ["dist", "./README.md", "./LICENSE", "./NOTICE"],
   "main": "dist/index.js",
