@@ -1,7 +1,10 @@
 name: 'Release @onbeam/sdk'
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allow running the workflow manually from the GitHub UI
+  release:
+    types:
+      - published    # Run the workflow when a new GitHub release is published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,6 +24,19 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Set version variable from release tag
+        run: |
+          TAG=${{ github.event.release.tag_name }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+
+      - name: Update @onbeam/sdk version
+        working-directory: ./packages/sdk
+        run: npm version $VERSION --allow-same-version --no-git-tag-version
+
+      - name: Update @onbeam/wagmi version
+        working-directory: ./packages/wagmi
+        run: npm version $VERSION --allow-same-version --no-git-tag-version
 
       - name: 📥 dependency installation
         uses: ./.github/actions/pnpm-install
@@ -48,4 +64,8 @@ jobs:
       - name: 🚀 Publish @onbeam/sdk
         run: pnpm publish --no-git-checks --access public
         working-directory: ./packages/sdk
+
+      - name: 🚀 Publish @onbeam/wagmi
+        run: pnpm publish --no-git-checks --access public
+        working-directory: ./packages/wagmi
 

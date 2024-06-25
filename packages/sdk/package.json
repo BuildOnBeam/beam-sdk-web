@@ -1,6 +1,5 @@
 {
   "name": "@onbeam/sdk",
-  "version": "1.0.3",
   "description": "Beam Web SDK",
   "repository": {
     "type": "git",
