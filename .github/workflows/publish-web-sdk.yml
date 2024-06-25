@@ -44,8 +44,11 @@ jobs:
       - name: Generate dependencies
         run: pnpm sdk generate
 
-      - name: Build the sdk
+      - name: Build @onbeam/sdk
         run: pnpm sdk prepublish
+
+      - name: Build @onbeam/wagmi
+        run: pnpm wagmi prepublish
 
       - name: move README.md to the sdk package
         run: mv ./README.md ./packages/sdk/README.md
