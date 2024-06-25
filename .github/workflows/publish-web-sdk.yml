@@ -65,3 +65,7 @@ jobs:
         run: pnpm publish --no-git-checks --access public
         working-directory: ./packages/sdk
 
+      - name: 🚀 Publish @onbeam/wagmi
+        run: pnpm publish --no-git-checks --access public
+        working-directory: ./packages/wagmi
+
