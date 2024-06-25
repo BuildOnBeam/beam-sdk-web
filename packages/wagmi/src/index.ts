@@ -1,0 +1,1 @@
+export { beam } from './beam';
