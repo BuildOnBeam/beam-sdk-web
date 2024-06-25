@@ -1,7 +1,11 @@
 {
   "name": "@onbeam/sdk",
   "version": "1.0.3",
-  "description": "",
+  "description": "Beam Web SDK",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Merit-Circle/beam-sdk-web"
+  },
   "files": ["dist", "./README.md", "./LICENSE", "./NOTICE"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
