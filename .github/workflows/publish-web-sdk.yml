@@ -34,6 +34,10 @@ jobs:
         working-directory: ./packages/sdk
         run: npm version $VERSION --allow-same-version --no-git-tag-version
 
+      - name: Update @onbeam/wagmi version
+        working-directory: ./packages/wagmi
+        run: npm version $VERSION --allow-same-version --no-git-tag-version
+
       - name: 📥 dependency installation
         uses: ./.github/actions/pnpm-install
 
