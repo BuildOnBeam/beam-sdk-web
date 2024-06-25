@@ -1,13 +1,7 @@
 {
   "name": "@onbeam/sdk",
-  "version": "1.0.3",
   "description": "",
-  "files": [
-    "dist",
-    "./README.md",
-    "./LICENSE",
-    "./NOTICE"
-  ],
+  "files": ["dist", "./README.md", "./LICENSE", "./NOTICE"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "private": false,
