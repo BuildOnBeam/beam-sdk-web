@@ -1,6 +1,5 @@
 {
   "name": "@onbeam/wagmi",
-  "version": "0.0.0",
   "description": "Beam Wagmi 2.x Connector",
   "repository": {
     "type": "git",
