@@ -58,12 +58,7 @@ export class SessionManager {
         message: hashMessage(message) as Hex,
       });
 
-      const result = await this.#confirm.requestConnection(
-        connection.url.replace(
-          'https://identity.preview.onbeam.com',
-          this.#config.authUrl,
-        ),
-      );
+      const result = await this.#confirm.requestConnection(connection.url);
 
       const verified = await verifyMessage({
         message,
@@ -181,12 +176,7 @@ export class SessionManager {
 
       // TODO add timeout
 
-      const result = await this.#confirm.requestSession(
-        sessionRequest.url.replace(
-          'https://identity.preview.onbeam.com',
-          this.#config.authUrl,
-        ),
-      );
+      const result = await this.#confirm.requestSession(sessionRequest.url);
 
       this.log(`Session request confirmed: ${result.confirmed}`);
 
@@ -455,12 +445,7 @@ export class SessionManager {
 
       // TODO add timeout
 
-      const result = await this.#confirm.signOperation(
-        operation.url.replace(
-          'https://identity.preview.onbeam.com',
-          this.#config.authUrl,
-        ),
-      );
+      const result = await this.#confirm.signOperation(operation.url);
 
       this.log(`Operation signed: ${result.confirmed}`);
 
