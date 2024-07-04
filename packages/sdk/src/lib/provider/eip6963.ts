@@ -9,7 +9,7 @@ import {
 export const beamProviderInfo = {
   icon: beamIcon,
   name: 'Beam',
-  rdns: 'com.onbeam.sdk',
+  rdns: 'com.onbeam',
   uuid: uuidv4(),
 } as EIP6963ProviderInfo;
 

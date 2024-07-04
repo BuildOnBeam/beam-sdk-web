@@ -52,6 +52,9 @@ export class SessionManager {
   async connect(chainId: number, message: string) {
     let address: string | null = null;
 
+    const fromStorage = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
+    if (fromStorage[chainId]) return { address: fromStorage[chainId] };
+
     try {
       const connection = await this.#connectionApi.getMessageSignatureUrl({
         chainId,
@@ -70,7 +73,14 @@ export class SessionManager {
         throw new Error('Failed to verify signature');
       }
 
-      if (result.address) address = result.address;
+      if (result.address) {
+        address = result.address;
+
+        this.#storage.set(StorageKey.ACCOUNT_ADDRESS, {
+          ...fromStorage,
+          [chainId]: address,
+        });
+      }
     } catch (error: unknown) {
       this.log(
         `Failed to get address: ${
@@ -86,6 +96,13 @@ export class SessionManager {
     return { address };
   }
 
+  /**
+   * Verifies if an address is owned by an ownerAddress
+   * @param address
+   * @param ownerAddress
+   * @param chainId
+   * @returns
+   */
   async verifyOwnership(
     address: string,
     ownerAddress: string,
@@ -534,7 +551,6 @@ export class SessionManager {
     return key;
   }
 
-  // TODO make generic
   private log(message: string) {
     if (!this.#config.debug) return;
 

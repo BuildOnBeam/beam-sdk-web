@@ -46,6 +46,7 @@ export class BeamProvider implements Provider {
 
   async #performRequest(request: RequestArguments): Promise<any> {
     switch (request.method) {
+      case 'eth_accounts':
       case 'eth_requestAccounts': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
@@ -112,12 +113,6 @@ export class BeamProvider implements Provider {
         }
       }
 
-      case 'eth_accounts': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
-
-        return this.#accounts[chainId] ? [this.#accounts[chainId]] : [];
-      }
-
       case 'eth_signTypedData':
       case 'eth_signTypedData_v4': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
@@ -147,7 +142,6 @@ export class BeamProvider implements Provider {
         }
       }
 
-      // SIWE
       case 'personal_sign': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
@@ -178,6 +172,11 @@ export class BeamProvider implements Provider {
       case 'eth_chainId': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
         return toHex(chainId);
+      }
+
+      case 'wallet_revokePermissions': {
+        this.disconnect();
+        return;
       }
 
       // Pass through methods
