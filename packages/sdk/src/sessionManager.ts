@@ -370,7 +370,7 @@ export class SessionManager {
     }
 
     if (session && key) {
-      return this.signOperationUsingSession(operation, entityId, key);
+      return this.signOperationUsingSession(operation, key);
     }
 
     if (useBrowserFallback) {
@@ -384,7 +384,6 @@ export class SessionManager {
 
   private async signOperationUsingSession(
     operation: CommonOperationResponse,
-    entityId: string,
     privateKey: Hex,
   ) {
     if (!operation.transactions.length) {
@@ -423,8 +422,6 @@ export class SessionManager {
 
     try {
       const result = await this.api.processOperation(operation.id, {
-        entityId,
-        gameId: operation.gameId,
         status: ConfirmOperationRequestStatus.Pending,
         transactions,
       });
