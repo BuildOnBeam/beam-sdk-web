@@ -52,8 +52,8 @@ export class SessionManager {
   async connect(chainId: number, message: string) {
     let address: string | null = null;
 
-    const fromStorage = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
-    if (fromStorage[chainId]) return { address: fromStorage[chainId] };
+    const stored = this.getAddress(chainId);
+    if (stored) return { address: stored };
 
     try {
       const connection = await this.#connectionApi.getMessageSignatureUrl({
@@ -76,10 +76,7 @@ export class SessionManager {
       if (result.address) {
         address = result.address;
 
-        this.#storage.set(StorageKey.ACCOUNT_ADDRESS, {
-          ...fromStorage,
-          [chainId]: address,
-        });
+        this.setAddress(chainId, address);
       }
     } catch (error: unknown) {
       this.log(
@@ -94,6 +91,29 @@ export class SessionManager {
     }
 
     return { address };
+  }
+
+  /**
+   * Returns a stored address for a chainId
+   * @param chainId
+   * @returns
+   */
+  getAddress(chainId: number) {
+    const stored = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
+    return stored[chainId] || null;
+  }
+
+  /**
+   * Sets an address for a chainId
+   * @param chainId
+   * @param address
+   */
+  setAddress(chainId: number, address: string) {
+    const stored = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
+    this.#storage.set(StorageKey.ACCOUNT_ADDRESS, {
+      ...stored,
+      [chainId]: address,
+    });
   }
 
   /**

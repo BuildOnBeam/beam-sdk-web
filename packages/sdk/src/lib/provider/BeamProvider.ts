@@ -46,7 +46,6 @@ export class BeamProvider implements Provider {
 
   async #performRequest(request: RequestArguments): Promise<any> {
     switch (request.method) {
-      case 'eth_accounts':
       case 'eth_requestAccounts': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
 
@@ -80,6 +79,27 @@ export class BeamProvider implements Provider {
         this.#accounts[chainId] = address;
 
         this.#eventEmitter.emit(ProviderEvent.ACCOUNTS_CHANGED, [address]);
+
+        return [address];
+      }
+
+      case 'eth_accounts': {
+        const { chainId } = await this.#rpcProvider.detectNetwork();
+
+        if (this.#accounts[chainId]) {
+          return [this.#accounts[chainId]];
+        }
+
+        let address: string | null = null;
+
+        try {
+          const result = this.#sessionManager.getAddress(chainId);
+          if (result) address = result;
+        } catch {}
+
+        if (!address) return [];
+
+        this.#accounts[chainId] = address;
 
         return [address];
       }
