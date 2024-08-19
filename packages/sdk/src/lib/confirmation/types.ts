@@ -16,6 +16,8 @@ export enum ReceiveMessage {
   REQUEST_MESSAGE_SIGNATURE_CONFIRMED = 'request_message_signature_confirmed',
   REQUEST_MESSAGE_SIGNATURE_ERROR = 'request_message_signature_error',
   REQUEST_MESSAGE_SIGNATURE_REJECTED = 'request_message_signature_rejected',
+
+  UNAUTHORIZED_CLOSE = 'unauthorized_close',
 }
 
 export type ConfirmationResult = {
