@@ -501,7 +501,7 @@ export class SessionManager {
 
       if (error) throw new Error(error);
 
-      return this.api.getOperation(operation.id);
+      return await this.api.getOperation(operation.id);
     });
   }
 

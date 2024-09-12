@@ -35,12 +35,6 @@ export default class ConfirmationScreen {
   constructor(config: BeamConfiguration) {
     this.config = config;
     this.overlayClosed = false;
-
-    const popupOverlayOptions = {
-      disableGenericPopupOverlay: false,
-      disableBlockedPopupOverlay: false,
-    };
-    this.overlay = new Overlay(popupOverlayOptions);
   }
 
   requestConnection(url: string): Promise<RequestConnectionResult> {
