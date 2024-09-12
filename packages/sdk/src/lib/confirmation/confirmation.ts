@@ -1,5 +1,5 @@
 import { BeamConfiguration } from '../config';
-// import Overlay from "../overlay";
+import Overlay from '../overlay';
 import { openPopupCenter } from './popup';
 import {
   BEAM_EVENT_TYPE,
@@ -13,7 +13,7 @@ const CONFIRMATION_WINDOW_HEIGHT = 720;
 const CONFIRMATION_WINDOW_WIDTH = 640;
 const CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION = 1000;
 
-export const CONFIRMATION_IFRAME_ID = 'passport-confirm';
+export const CONFIRMATION_IFRAME_ID = 'beam-confirm';
 export const CONFIRMATION_IFRAME_STYLE =
   'display: none; position: absolute;width:0px;height:0px;border:0;';
 
@@ -26,8 +26,7 @@ export default class ConfirmationScreen {
 
   private popupOptions: { width: number; height: number } | undefined;
 
-  //   private overlay: Overlay | undefined;
-
+  private overlay: Overlay | undefined;
   private overlayClosed: boolean;
 
   // @ts-ignore
@@ -36,6 +35,12 @@ export default class ConfirmationScreen {
   constructor(config: BeamConfiguration) {
     this.config = config;
     this.overlayClosed = false;
+
+    const popupOverlayOptions = {
+      disableGenericPopupOverlay: false,
+      disableBlockedPopupOverlay: false,
+    };
+    this.overlay = new Overlay(popupOverlayOptions);
   }
 
   requestConnection(url: string): Promise<RequestConnectionResult> {
@@ -151,47 +156,54 @@ export default class ConfirmationScreen {
     });
   }
 
-  //   loading(popupOptions?: { width: number; height: number }) {
-  //     this.popupOptions = popupOptions;
+  loading(popupOptions?: { width: number; height: number }) {
+    this.popupOptions = popupOptions;
 
-  //     try {
-  //       this.confirmationWindow = openPopupCenter({
-  //         url: this.getHref("loading"),
-  //         title: CONFIRMATION_WINDOW_TITLE,
-  //         width: popupOptions?.width || CONFIRMATION_WINDOW_WIDTH,
-  //         height: popupOptions?.height || CONFIRMATION_WINDOW_HEIGHT,
-  //       });
-  //       this.overlay = new Overlay(this.config.popupOverlayOptions);
-  //     } catch (e) {
-  //       // If an error is thrown here then the popup is blocked
-  //       this.overlay = new Overlay(this.config.popupOverlayOptions, true);
-  //     }
+    const url = `${this.config.authUrl}/loading`;
 
-  //     this.overlay.append(
-  //       () => {
-  //         try {
-  //           this.confirmationWindow?.close();
-  //           this.confirmationWindow = openPopupCenter({
-  //             url: this.getHref("loading"),
-  //             title: CONFIRMATION_WINDOW_TITLE,
-  //             width: this.popupOptions?.width || CONFIRMATION_WINDOW_WIDTH,
-  //             height: this.popupOptions?.height || CONFIRMATION_WINDOW_HEIGHT,
-  //           });
-  //         } catch {
-  //           /* Empty */
-  //         }
-  //       },
-  //       () => {
-  //         this.overlayClosed = true;
-  //         this.closeWindow();
-  //       }
-  //     );
-  //   }
+    const popupOverlayOptions = {
+      disableGenericPopupOverlay: false,
+      disableBlockedPopupOverlay: false,
+    };
+
+    try {
+      this.confirmationWindow = openPopupCenter({
+        url,
+        title: CONFIRMATION_WINDOW_TITLE,
+        width: popupOptions?.width || CONFIRMATION_WINDOW_WIDTH,
+        height: popupOptions?.height || CONFIRMATION_WINDOW_HEIGHT,
+      });
+      this.overlay = new Overlay(popupOverlayOptions);
+    } catch {
+      // If an error is thrown here then the popup is blocked
+      this.overlay = new Overlay(popupOverlayOptions, true);
+    }
+
+    this.overlay.append(
+      () => {
+        try {
+          this.confirmationWindow?.close();
+          this.confirmationWindow = openPopupCenter({
+            url,
+            title: CONFIRMATION_WINDOW_TITLE,
+            width: this.popupOptions?.width || CONFIRMATION_WINDOW_WIDTH,
+            height: this.popupOptions?.height || CONFIRMATION_WINDOW_HEIGHT,
+          });
+        } catch {
+          /* Empty */
+        }
+      },
+      () => {
+        this.overlayClosed = true;
+        this.closeWindow();
+      },
+    );
+  }
 
   closeWindow() {
     this.confirmationWindow?.close();
-    // this.overlay?.remove();
-    // this.overlay = undefined;
+    this.overlay?.remove();
+    this.overlay = undefined;
   }
 
   showConfirmationScreen(
@@ -205,11 +217,11 @@ export default class ConfirmationScreen {
     }
 
     // This indicates the user closed the overlay so the transaction should be rejected
-    // if (!this.overlay) {
-    //   this.overlayClosed = false;
-    //   resolve({ confirmed: false });
-    //   return;
-    // }
+    if (!this.overlay) {
+      this.overlayClosed = false;
+      resolve({ confirmed: false });
+      return;
+    }
 
     // https://stackoverflow.com/questions/9388380/capture-the-close-event-of-popup-window-in-javascript/48240128#48240128
     const timerCallback = () => {
@@ -226,11 +238,9 @@ export default class ConfirmationScreen {
       CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION,
     );
 
-    // this.overlay.update(() =>
-    //   this.recreateConfirmationWindow(href, timerCallback)
-    // );
-
-    this.recreateConfirmationWindow(href, timerCallback);
+    this.overlay.update(() =>
+      this.recreateConfirmationWindow(href, timerCallback),
+    );
   }
 
   private recreateConfirmationWindow(href: string, timerCallback: () => void) {
