@@ -55,42 +55,44 @@ export class SessionManager {
     const stored = this.getAddress(chainId);
     if (stored) return { address: stored };
 
-    try {
-      const connection = await this.#connectionApi.getMessageSignatureUrl({
-        chainId,
-        message: hashMessage(message) as Hex,
-      });
+    return this.withConfirmationScreen()(async () => {
+      try {
+        const connection = await this.#connectionApi.getMessageSignatureUrl({
+          chainId,
+          message: hashMessage(message) as Hex,
+        });
 
-      const result = await this.#confirm.requestConnection(connection.url);
+        const result = await this.#confirm.requestConnection(connection.url);
 
-      const verified = await verifyMessage({
-        message,
-        signature: result.signature as Hex,
-        address: result.ownerAddress,
-      });
+        const verified = await verifyMessage({
+          message,
+          signature: result.signature as Hex,
+          address: result.ownerAddress,
+        });
 
-      if (!verified) {
-        throw new Error('Failed to verify signature');
+        if (!verified) {
+          throw new Error('Failed to verify signature');
+        }
+
+        if (result.address) {
+          address = result.address;
+
+          this.setAddress(chainId, address);
+        }
+      } catch (error: unknown) {
+        this.log(
+          `Failed to get address: ${
+            error instanceof Error ? error.message : 'Unknown error.'
+          }`,
+        );
       }
 
-      if (result.address) {
-        address = result.address;
-
-        this.setAddress(chainId, address);
+      if (!address) {
+        throw new Error('Failed to get address');
       }
-    } catch (error: unknown) {
-      this.log(
-        `Failed to get address: ${
-          error instanceof Error ? error.message : 'Unknown error.'
-        }`,
-      );
-    }
 
-    if (!address) {
-      throw new Error('Failed to get address');
-    }
-
-    return { address };
+      return { address };
+    });
   }
 
   /**
@@ -474,31 +476,33 @@ export class SessionManager {
   private async signOperationUsingBrowser(operation: CommonOperationResponse) {
     let error: string | null = null;
 
-    try {
-      this.log(`Signing operation using browser: ${operation.id}`);
+    return this.withConfirmationScreen()(async () => {
+      try {
+        this.log(`Signing operation using browser: ${operation.id}`);
 
-      // TODO add timeout
+        // TODO add timeout
 
-      const result = await this.#confirm.signOperation(operation.url);
+        const result = await this.#confirm.signOperation(operation.url);
 
-      this.log(`Operation signed: ${result.confirmed}`);
+        this.log(`Operation signed: ${result.confirmed}`);
 
-      if (!result.confirmed) {
-        throw new Error('Unable to sign operation');
+        if (!result.confirmed) {
+          throw new Error('Unable to sign operation');
+        }
+      } catch (err: unknown) {
+        this.log(
+          `Failed to sign operation: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
+
+        error = err instanceof Error ? err.message : 'Unknown error.';
       }
-    } catch (err: unknown) {
-      this.log(
-        `Failed to sign operation: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
 
-      error = err instanceof Error ? err.message : 'Unknown error.';
-    }
+      if (error) throw new Error(error);
 
-    if (error) throw new Error(error);
-
-    return this.api.getOperation(operation.id);
+      return this.api.getOperation(operation.id);
+    });
   }
 
   /**
@@ -566,6 +570,35 @@ export class SessionManager {
     this.#storage.set(StorageKey.SIGNING_KEY, key);
 
     return key;
+  }
+
+  /**
+   * Open confirmation screen and close it automatically if the
+   * underlying task fails.
+   */
+  public withConfirmationScreen(popupWindowSize?: {
+    width: number;
+    height: number;
+  }) {
+    return <T>(task: () => Promise<T>): Promise<T> =>
+      this.withConfirmationScreenTask(popupWindowSize)(task)();
+  }
+
+  public withConfirmationScreenTask(popupWindowSize?: {
+    width: number;
+    height: number;
+  }) {
+    return <T>(task: () => Promise<T>): (() => Promise<T>) =>
+      async () => {
+        this.#confirm.loading(popupWindowSize);
+
+        try {
+          return await task();
+        } catch (err) {
+          this.#confirm.closeWindow();
+          throw err;
+        }
+      };
   }
 
   private log(message: string) {
