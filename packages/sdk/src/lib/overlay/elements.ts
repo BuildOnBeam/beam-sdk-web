@@ -70,11 +70,11 @@ const getTryAgainButton = () => `
       id="${BEAM_OVERLAY_TRY_AGAIN_ID}"
       style="
         margin-top: 27px !important;
-        color: #3d3d3d !important;
+        color: #dee7e1 !important;
         background: transparent !important;
         padding: 12px 24px !important;
         border-radius: 30px !important;
-        border: 1px solid #3d3d3d !important;
+        border: 1px solid #dee7e1 !important;
         font-size: 1em !important;
         font-weight: 500 !important;
         cursor: pointer !important;
