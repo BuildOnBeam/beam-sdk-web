@@ -18,7 +18,7 @@ export type ChainConfig = {
   id: ChainId;
   /** The publishableKey belonging to the chain */
   publishableKey: string;
-  /** The chain environment. Not that setting this to 'preview' only has an effect on the testnet chain */
+  /** The chain environment. Setting this to 'preview' only has an effect on the testnet chain */
   environment?: Environment;
 }[];
 
