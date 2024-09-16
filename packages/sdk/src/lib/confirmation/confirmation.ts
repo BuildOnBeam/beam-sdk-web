@@ -41,7 +41,7 @@ export default class ConfirmationScreen {
     return new Promise((resolve, reject) => {
       const messageHandler = ({ data, origin }: MessageEvent) => {
         if (
-          origin !== this.config.authUrl ||
+          origin !== this.config.getChainConfig().authUrl ||
           data.eventType !== BEAM_EVENT_TYPE
         ) {
           return;
@@ -82,7 +82,7 @@ export default class ConfirmationScreen {
     return new Promise((resolve, reject) => {
       const messageHandler = ({ data, origin }: MessageEvent) => {
         if (
-          origin !== this.config.authUrl ||
+          origin !== this.config.getChainConfig().authUrl ||
           data.eventType !== BEAM_EVENT_TYPE
         ) {
           return;
@@ -118,7 +118,7 @@ export default class ConfirmationScreen {
     return new Promise((resolve, reject) => {
       const messageHandler = ({ data, origin }: MessageEvent) => {
         if (
-          origin !== this.config.authUrl ||
+          origin !== this.config.getChainConfig().authUrl ||
           data.eventType !== BEAM_EVENT_TYPE
         ) {
           return;
@@ -153,7 +153,7 @@ export default class ConfirmationScreen {
   loading(popupOptions?: { width: number; height: number }) {
     this.popupOptions = popupOptions;
 
-    const url = `${this.config.authUrl}/loading`;
+    const url = `${this.config.getChainConfig().authUrl}/loading`;
 
     const popupOverlayOptions = {
       disableGenericPopupOverlay: false,

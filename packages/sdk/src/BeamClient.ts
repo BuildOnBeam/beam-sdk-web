@@ -43,8 +43,11 @@ export class BeamClient {
     });
 
     AXIOS_INSTANCE.interceptors.request.use((config) => {
-      config.baseURL = this.#config.apiUrl;
-      config.headers.set('x-api-key', this.#config.publishableKey);
+      config.baseURL = this.#config.getChainConfig().apiUrl;
+      config.headers.set(
+        'x-api-key',
+        this.#config.getChainConfig().publishableKey,
+      );
       return config;
     });
   }

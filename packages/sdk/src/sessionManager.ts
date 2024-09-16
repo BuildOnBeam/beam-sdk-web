@@ -26,9 +26,8 @@ export type SessionManagerInput = {
 };
 
 export class SessionManager {
-  readonly #config: BeamConfiguration;
-
-  readonly #confirm: ConfirmationScreen;
+  #config: BeamConfiguration;
+  #confirm: ConfirmationScreen;
 
   readonly #storage: StorageService<StorageKeys>;
 
@@ -40,6 +39,15 @@ export class SessionManager {
     this.#config = config;
     this.#storage = storage;
 
+    this.#confirm = new ConfirmationScreen(this.#config);
+  }
+
+  /**
+   * Update the configuration
+   * @param config
+   */
+  setConfig(config: BeamConfiguration) {
+    this.#config = config;
     this.#confirm = new ConfirmationScreen(this.#config);
   }
 

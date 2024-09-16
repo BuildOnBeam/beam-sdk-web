@@ -1,40 +1,69 @@
 import { ClientConfig, Environment } from '../types';
+import { ChainId } from '../types';
 
 export class BeamConfiguration {
-  readonly environment: Environment;
-  readonly publishableKey: string;
+  readonly chains: ClientConfig['chains'];
+
+  #chainId: ChainId;
+
   readonly debug?: boolean;
 
-  readonly authUrl: string;
-  readonly apiUrl: string;
-  readonly rpcUrl: string;
-
   constructor(config: ClientConfig) {
-    this.environment = config.environment;
-    this.publishableKey = config.publishableKey;
+    if (!config.chains.some((chain) => chain.id === config.chainId)) {
+      throw new Error('Chain config does not contain the chainId');
+    }
+
+    this.chains = config.chains;
+    this.#chainId = config.chainId;
+
     this.debug = config.debug || false;
+  }
 
-    switch (this.environment) {
-      case Environment.MAINNET:
-        this.authUrl = 'https://identity.onbeam.com';
-        this.apiUrl = 'https://api.onbeam.com';
-        this.rpcUrl = 'https://build.onbeam.com/rpc';
-        break;
+  get chainId() {
+    return this.#chainId;
+  }
 
-      case Environment.TESTNET:
-        this.authUrl = 'https://identity.testnet.onbeam.com';
-        this.apiUrl = 'https://api.testnet.onbeam.com';
-        this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
-        break;
+  setChainId(chainId: ChainId) {
+    if (!this.chains.find((chain) => chain.id === chainId)) {
+      throw new Error(`Chain ${chainId} not found in configuration`);
+    }
 
-      case Environment.PREVIEW:
-        this.authUrl = 'https://identity.preview.onbeam.com';
-        this.apiUrl = 'https://api.preview.onbeam.com';
-        this.rpcUrl = 'https://build.onbeam.com/rpc/testnet';
-        break;
+    this.#chainId = chainId;
+  }
 
-      default:
-        throw new Error(`Invalid Beam environment: ${this.environment}`);
+  getChainConfig() {
+    const chainId = this.chainId;
+    const chain = this.chains.find((chain) => chain.id === chainId);
+
+    if (!chain) {
+      throw new Error(`Chain ${chainId} not found in configuration`);
+    }
+
+    switch (chainId) {
+      case ChainId.BEAM_MAINNET:
+        return {
+          publishableKey: chain.publishableKey,
+          authUrl: 'https://identity.onbeam.com',
+          apiUrl: 'https://api.onbeam.com',
+          rpcUrl: 'https://build.onbeam.com/rpc',
+        };
+
+      case ChainId.BEAM_TESTNET:
+        if (chain.environment === Environment.PREVIEW) {
+          return {
+            publishableKey: chain.publishableKey,
+            authUrl: 'https://identity.preview.onbeam.com',
+            apiUrl: 'https://api.preview.onbeam.com',
+            rpcUrl: 'https://build.onbeam.com/rpc/testnet',
+          };
+        }
+
+        return {
+          publishableKey: chain.publishableKey,
+          authUrl: 'https://identity.testnet.onbeam.com',
+          apiUrl: 'https://api.testnet.onbeam.com',
+          rpcUrl: 'https://build.onbeam.com/rpc/testnet',
+        };
     }
   }
 }

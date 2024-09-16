@@ -1,5 +1,5 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
-import { toHex } from 'viem';
+import { fromHex, toHex } from 'viem';
 import { SessionManager } from '../../sessionManager';
 import { BeamConfiguration } from '../config';
 import TypedEventEmitter from '../utils/typedEventEmitter';
@@ -14,6 +14,7 @@ import {
   RequestArguments,
 } from './types';
 import { parseAndValidateTypedData } from './utils';
+import { ChainId } from '../../types';
 
 export type BeamProviderInput = {
   config: BeamConfiguration;
@@ -27,7 +28,7 @@ export class BeamProvider implements Provider {
 
   readonly #eventEmitter: TypedEventEmitter<ProviderEventMap>;
 
-  readonly #rpcProvider: StaticJsonRpcProvider;
+  #rpcProvider: StaticJsonRpcProvider;
 
   // Account abstractions per chainId
   #accounts: Record<number, string> = {};
@@ -39,7 +40,9 @@ export class BeamProvider implements Provider {
 
     this.#sessionManager = sessionManager;
 
-    this.#rpcProvider = new StaticJsonRpcProvider(this.#config.rpcUrl);
+    this.#rpcProvider = new StaticJsonRpcProvider(
+      this.#config.getChainConfig().rpcUrl,
+    );
 
     this.#eventEmitter = new TypedEventEmitter<ProviderEventMap>();
   }
@@ -192,6 +195,40 @@ export class BeamProvider implements Provider {
       case 'eth_chainId': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
         return toHex(chainId);
+      }
+
+      case 'wallet_switchEthereumChain': {
+        const chainId = fromHex(request.params?.[0].chainId, 'number');
+
+        if (!Object.values(ChainId).includes(chainId)) {
+          throw new JsonRpcError(
+            RpcErrorCode.INVALID_PARAMS,
+            `Invalid chainId: ${chainId}`,
+          );
+        }
+
+        try {
+          this.#config.setChainId(chainId);
+
+          this.#rpcProvider = new StaticJsonRpcProvider(
+            this.#config.getChainConfig().rpcUrl,
+          );
+
+          this.#eventEmitter.emit(ProviderEvent.CHAIN_CHANGED, [
+            toHex(chainId),
+          ]);
+
+          const [address] = await this.#performRequest({
+            method: 'eth_requestAccounts',
+          });
+
+          return address;
+        } catch (error: unknown) {
+          throw new JsonRpcError(
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to switch chain: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
       }
 
       case 'wallet_revokePermissions': {
