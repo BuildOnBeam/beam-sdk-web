@@ -208,15 +208,14 @@ export class BeamProvider implements Provider {
         }
 
         try {
+          // Disconnect the wallet to enforce a new connection with a new account
+          this.disconnect();
+
           this.#config.setChainId(chainId);
 
           this.#rpcProvider = new StaticJsonRpcProvider(
             this.#config.getChainConfig().rpcUrl,
           );
-
-          this.#eventEmitter.emit(ProviderEvent.CHAIN_CHANGED, [
-            toHex(chainId),
-          ]);
 
           const [address] = await this.#performRequest({
             method: 'eth_requestAccounts',

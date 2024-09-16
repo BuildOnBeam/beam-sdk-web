@@ -60,15 +60,12 @@ export type Provider = {
 
 export enum ProviderEvent {
   ACCOUNTS_CHANGED = 'accountsChanged',
-  CHAIN_CHANGED = 'chainChanged',
 }
 
 export type AccountsChangedEvent = Array<string>;
-export type ChainChanged = Array<string>;
 
 export interface ProviderEventMap extends Record<string, any> {
   [ProviderEvent.ACCOUNTS_CHANGED]: [AccountsChangedEvent];
-  [ProviderEvent.CHAIN_CHANGED]: [ChainChanged];
 }
 
 /**
