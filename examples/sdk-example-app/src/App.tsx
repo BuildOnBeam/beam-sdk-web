@@ -16,7 +16,7 @@ const chainId = 13337; // Beam Testnet
 const config: ClientConfig = {
   chains: [
     {
-      chainId: ChainId.BEAM_TESTNET,
+      id: ChainId.BEAM_TESTNET,
       publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
       isPreview: true,
     },
