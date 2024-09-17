@@ -9,8 +9,8 @@ export class BeamConfiguration {
   readonly debug?: boolean;
 
   constructor(config: ClientConfig) {
-    if (!config.chains.some((chain) => chain.id === config.chainId)) {
-      throw new Error('Chain config does not contain the chainId');
+    if (!config.chains.length) {
+      throw new Error('At least one chain should be defined');
     }
 
     this.chains = config.chains;
