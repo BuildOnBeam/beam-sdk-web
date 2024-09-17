@@ -37,7 +37,3 @@ jobs:
       # Run the build
       - name: Build @onbeam/sdk
         run: pnpm sdk prepublish
-
-      # Run the build
-      - name: Build @onbeam/wagmi
-        run: pnpm wagmi prepublish
