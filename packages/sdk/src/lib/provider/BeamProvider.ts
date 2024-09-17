@@ -14,7 +14,6 @@ import {
   RequestArguments,
 } from './types';
 import { parseAndValidateTypedData } from './utils';
-import { ChainId } from '../../types';
 
 export type BeamProviderInput = {
   config: BeamConfiguration;
@@ -200,10 +199,10 @@ export class BeamProvider implements Provider {
       case 'wallet_switchEthereumChain': {
         const chainId = fromHex(request.params?.[0].chainId, 'number');
 
-        if (!Object.values(ChainId).includes(chainId)) {
+        if (!this.#config.chains.find((c) => c.id === chainId)) {
           throw new JsonRpcError(
             RpcErrorCode.INVALID_PARAMS,
-            `Invalid chainId: ${chainId}`,
+            `Chain ${chainId} not found in configuration`,
           );
         }
 
