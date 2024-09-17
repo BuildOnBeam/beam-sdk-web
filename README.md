@@ -36,14 +36,18 @@ pnpm add @onbeam/sdk
 
 ## Creating a client
 
-Start by creating a new instance of the Beam client, and configuring it with your API key:
+Start by creating a new instance of the Beam client, and configuring it with the chains you want to use. We're using the Beam testnet chain in this example:
 
 ```typescript
-import { BeamConfiguration } from '@onbeam/sdk';
+import { BeamConfiguration, ChainId } from '@onbeam/sdk';
 
 const config = new BeamConfiguration({
-  environment: 'mainnet',
-  publishableKey: 'your-publishable-key',
+  chains: [
+    {
+      id: ChainId.BEAM_TESTNET,
+      publishableKey: 'your-beam-testnet-publishable-key'
+    }
+  ],
   debug: true, // Logs debug information to the console
 });
 
@@ -54,30 +58,51 @@ Make sure your API key matches the environment you are working on. For example, 
 
 ## Authenticating a user
 
-If you're using `wagmi`, you can authenticate a user by providing the `wagmi` config with our Beam Connector:
+If you're using `wagmi`, you can authenticate a user by providing the `wagmi` config with our EIP-6963 compatible wallet provider. First, provide the `wagmi` config with
+the `injected` connector. Then, create a new Beam client and connect the provider:
 
-```typescript
-import { createConfig, http } from 'wagmi'
-import { beam } from 'viem/chains';
-import { beam as beamConnector } from '@onbeam/wagmi';
+```tsx
+import { createConfig, http, WagmiProvider } from 'wagmi'
+import { beamTestnet } from 'viem/chains';
+import { injected } from 'wagmi/connectors';
 import { BeamConfiguration } from '@onbeam/sdk';
+import { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const beamConfig = new BeamConfiguration({ ... }) // your config from the previous step
-
-const config = createConfig({
-  chains: [beam]
+// Create the wagmi config and provide the 'injected' connector
+const wagmiConfig = createConfig({
+  chains: [beamTestnet]
   connectors: [
-    beamConnector({ 
-      config: beamConfig
-    })
+    injected(),
   ],
   transports: {
-    [beam.id]: http(),
+    [beamTestnet.id]: http(),
   },
 });
+
+const queryClient = new QueryClient();
+
+// ... using the `config` from the previous example
+const beamClient = new BeamClient(config);
+
+export default function App() {
+  // Connect and announce the provider
+  useEffect(() => {
+    if (!beamClient) return;
+    beamClient.connectProvider();
+  }, []);
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <YourApp />
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
 ```
 
-Our connector supports wagmi 2.x and above, and is shipped as a [separate package](https://www.npmjs.com/package/@onbeam/wagmi).
+Our wallet provider is EIP-6963 compatible and supports wagmi 2.x and above.
 
 ## Examples
 The repository includes two example apps that demonstrate how to use the Beam Web SDK:

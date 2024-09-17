@@ -1,8 +1,3 @@
-export enum Environment {
-  PRODUCTION = 'production',
-  PREVIEW = 'preview',
-}
-
 export enum ChainId {
   BEAM_MAINNET = 4337,
   BEAM_TESTNET = 13337,
@@ -18,8 +13,8 @@ export type ChainConfig = {
   id: ChainId;
   /** The publishableKey belonging to the chain */
   publishableKey: string;
-  /** The chain environment. Setting this to 'preview' only has an effect on the testnet chain */
-  environment?: Environment;
+  /** If the preview environment should be connected to. Setting this to true only has an effect on the testnet chain */
+  isPreview?: boolean;
 }[];
 
 export type ClientConfig = {

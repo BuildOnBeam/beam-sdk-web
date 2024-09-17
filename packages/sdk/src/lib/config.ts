@@ -1,4 +1,4 @@
-import { ClientConfig, Environment } from '../types';
+import { ClientConfig } from '../types';
 import { ChainId } from '../types';
 
 export class BeamConfiguration {
@@ -14,6 +14,14 @@ export class BeamConfiguration {
     }
 
     this.chains = config.chains;
+
+    if (
+      config.chainId &&
+      !config.chains.find((chain) => chain.id === config.chainId)
+    ) {
+      throw new Error(`Chain ${config.chainId} not found in configuration`);
+    }
+
     this.#chainId = config.chainId ?? config.chains[0].id;
 
     this.debug = config.debug || false;
@@ -49,7 +57,7 @@ export class BeamConfiguration {
         };
 
       case ChainId.BEAM_TESTNET:
-        if (chain.environment === Environment.PREVIEW) {
+        if (chain.isPreview) {
           return {
             publishableKey: chain.publishableKey,
             authUrl: 'https://identity.preview.onbeam.com',

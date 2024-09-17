@@ -5,7 +5,7 @@ import type {
   GetUserResponse,
   Session,
 } from '@onbeam/sdk';
-import { BeamClient, Environment } from '@onbeam/sdk';
+import { BeamClient, ChainId } from '@onbeam/sdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './styles.css';
 import beamLogo from '/beam-logo.png';
@@ -14,8 +14,13 @@ const entityId = import.meta.env.VITE_BEAM_ENTITY_ID;
 const chainId = 13337; // Beam Testnet
 
 const config: ClientConfig = {
-  environment: Environment.PREVIEW,
-  publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
+  chains: [
+    {
+      chainId: ChainId.BEAM_TESTNET,
+      publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
+      isPreview: true,
+    },
+  ],
   debug: true,
 };
 
