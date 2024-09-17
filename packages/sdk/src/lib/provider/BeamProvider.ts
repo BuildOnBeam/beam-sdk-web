@@ -1,5 +1,5 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
-import { toHex } from 'viem';
+import { fromHex, toHex } from 'viem';
 import { SessionManager } from '../../sessionManager';
 import { BeamConfiguration } from '../config';
 import TypedEventEmitter from '../utils/typedEventEmitter';
@@ -27,7 +27,7 @@ export class BeamProvider implements Provider {
 
   readonly #eventEmitter: TypedEventEmitter<ProviderEventMap>;
 
-  readonly #rpcProvider: StaticJsonRpcProvider;
+  #rpcProvider: StaticJsonRpcProvider;
 
   // Account abstractions per chainId
   #accounts: Record<number, string> = {};
@@ -39,7 +39,9 @@ export class BeamProvider implements Provider {
 
     this.#sessionManager = sessionManager;
 
-    this.#rpcProvider = new StaticJsonRpcProvider(this.#config.rpcUrl);
+    this.#rpcProvider = new StaticJsonRpcProvider(
+      this.#config.getChainConfig().rpcUrl,
+    );
 
     this.#eventEmitter = new TypedEventEmitter<ProviderEventMap>();
   }
@@ -192,6 +194,39 @@ export class BeamProvider implements Provider {
       case 'eth_chainId': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
         return toHex(chainId);
+      }
+
+      case 'wallet_switchEthereumChain': {
+        const chainId = fromHex(request.params?.[0].chainId, 'number');
+
+        if (!this.#config.chains.find((c) => c.id === chainId)) {
+          throw new JsonRpcError(
+            RpcErrorCode.INVALID_PARAMS,
+            `Chain ${chainId} not found in configuration`,
+          );
+        }
+
+        try {
+          // Disconnect the wallet to enforce a new connection with a new account
+          this.disconnect();
+
+          this.#config.setChainId(chainId);
+
+          this.#rpcProvider = new StaticJsonRpcProvider(
+            this.#config.getChainConfig().rpcUrl,
+          );
+
+          const [address] = await this.#performRequest({
+            method: 'eth_requestAccounts',
+          });
+
+          return address;
+        } catch (error: unknown) {
+          throw new JsonRpcError(
+            RpcErrorCode.INTERNAL_ERROR,
+            `Failed to switch chain: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
       }
 
       case 'wallet_revokePermissions': {

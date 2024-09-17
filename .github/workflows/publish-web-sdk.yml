@@ -34,10 +34,6 @@ jobs:
         working-directory: ./packages/sdk
         run: npm version $VERSION --allow-same-version --no-git-tag-version
 
-      - name: Update @onbeam/wagmi version
-        working-directory: ./packages/wagmi
-        run: npm version $VERSION --allow-same-version --no-git-tag-version
-
       - name: 📥 dependency installation
         uses: ./.github/actions/pnpm-install
 
@@ -46,9 +42,6 @@ jobs:
 
       - name: Build @onbeam/sdk
         run: pnpm sdk prepublish
-
-      - name: Build @onbeam/wagmi
-        run: pnpm wagmi prepublish
 
       - name: move README.md to the sdk package
         run: mv ./README.md ./packages/sdk/README.md
@@ -67,8 +60,3 @@ jobs:
       - name: 🚀 Publish @onbeam/sdk
         run: pnpm publish --no-git-checks --access public
         working-directory: ./packages/sdk
-
-      - name: 🚀 Publish @onbeam/wagmi
-        run: pnpm publish --no-git-checks --access public
-        working-directory: ./packages/wagmi
-

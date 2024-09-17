@@ -6,7 +6,6 @@
   "license": "ISC",
   "scripts": {
     "sdk": "pnpm --filter @onbeam/sdk",
-    "wagmi": "pnpm --filter @onbeam/wagmi",
     "sdk-example": "pnpm --filter beam-sdk-example-app",
     "wagmi-example": "pnpm --filter beam-wagmi-example-app",
     "test": "echo \"Error: no test specified\" && exit 1",
