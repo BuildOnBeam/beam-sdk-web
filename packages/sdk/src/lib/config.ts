@@ -14,7 +14,7 @@ export class BeamConfiguration {
     }
 
     this.chains = config.chains;
-    this.#chainId = config.chainId;
+    this.#chainId = config.chainId ?? config.chains[0].id;
 
     this.debug = config.debug || false;
   }
