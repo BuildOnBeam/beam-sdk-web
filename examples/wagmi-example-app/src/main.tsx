@@ -8,7 +8,7 @@ const config: ClientConfig = {
   chains: [
     {
       chainId: ChainId.BEAM_TESTNET,
-      publishableKey: import.meta.env.VITE_BEAM_TESTNET_PUBLISHABLE_KEY,
+      publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
       isPreview: true,
     },
   ],
