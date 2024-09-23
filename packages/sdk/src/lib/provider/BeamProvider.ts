@@ -108,6 +108,7 @@ export class BeamProvider implements Provider {
 
       case 'eth_sendTransaction': {
         const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { sponsor } = this.#config.getChainConfig();
 
         if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
@@ -123,6 +124,7 @@ export class BeamProvider implements Provider {
           const operation = await this.#sessionManager.sendTransaction(
             this.#accounts[chainId],
             chainId,
+            sponsor,
             transaction,
           );
 

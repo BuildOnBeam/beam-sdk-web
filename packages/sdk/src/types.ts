@@ -15,6 +15,8 @@ export type ChainConfig = {
   publishableKey: string;
   /** If the preview environment should be connected to. Setting this to true only has an effect on the testnet chain */
   isPreview?: boolean;
+  /** Optionally define whenever all transactions should be sponsored, requires deposits to be made through dashboard.(testnet).onbeam.com */
+  sponsor?: boolean;
 }[];
 
 export type ClientConfig = {

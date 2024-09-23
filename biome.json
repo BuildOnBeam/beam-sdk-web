@@ -4,7 +4,8 @@
     "ignore": [
       "pnpm-lock.yaml",
       "packages/sdk/src/lib/api/beam.types.generated",
-      "packages/sdk/src/lib/api/beam.api.generated.ts"
+      "packages/sdk/src/lib/api/beam.api.generated.ts",
+      "packages/sdk/dist"
     ]
   },
   "formatter": {
