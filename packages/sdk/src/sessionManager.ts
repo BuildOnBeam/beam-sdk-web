@@ -327,6 +327,7 @@ export class SessionManager {
   async sendTransaction(
     accountAddress: string,
     chainId: number,
+    sponsor: boolean,
     interaction: CreateTransactionInputInteractionsItem,
   ) {
     let operation: CommonOperationResponse | null = null;
@@ -337,6 +338,7 @@ export class SessionManager {
       const result = await this.#connectionApi.createTransactionForAddress({
         accountAddress,
         chainId,
+        sponsor,
         interactions: [interaction],
       });
 

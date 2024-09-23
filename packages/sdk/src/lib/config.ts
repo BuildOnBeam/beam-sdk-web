@@ -51,6 +51,7 @@ export class BeamConfiguration {
       case ChainId.BEAM_MAINNET:
         return {
           publishableKey: chain.publishableKey,
+          sponsor: chain.sponsor ?? false,
           authUrl: 'https://identity.onbeam.com',
           apiUrl: 'https://api.onbeam.com',
           rpcUrl: 'https://build.onbeam.com/rpc',
@@ -60,6 +61,7 @@ export class BeamConfiguration {
         if (chain.isPreview) {
           return {
             publishableKey: chain.publishableKey,
+            sponsor: chain.sponsor ?? false,
             authUrl: 'https://identity.preview.onbeam.com',
             apiUrl: 'https://api.preview.onbeam.com',
             rpcUrl: 'https://build.onbeam.com/rpc/testnet',
@@ -68,6 +70,7 @@ export class BeamConfiguration {
 
         return {
           publishableKey: chain.publishableKey,
+          sponsor: chain.sponsor ?? false,
           authUrl: 'https://identity.testnet.onbeam.com',
           apiUrl: 'https://api.testnet.onbeam.com',
           rpcUrl: 'https://build.onbeam.com/rpc/testnet',
