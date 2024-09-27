@@ -3,7 +3,7 @@
   "description": "Beam Web SDK",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Merit-Circle/beam-sdk-web"
+    "url": "https://github.com/BuildOnBeam/beam-sdk-web"
   },
   "files": ["dist", "./README.md", "./LICENSE", "./NOTICE"],
   "main": "dist/index.js",
