@@ -88,6 +88,13 @@ export class BeamClient {
     return provider;
   }
 
+  /**
+   * Verifies the ownership of an address
+   * @param address
+   * @param ownerAddress
+   * @param chainId
+   * @returns
+   */
   public verifyOwnership(
     address: string,
     ownerAddress: string,
