@@ -661,7 +661,9 @@ export class SessionManager {
         try {
           return await task();
         } catch (err) {
-          this.#confirm.closeWindow();
+          if (!this.#config.debug) {
+            this.#confirm.closeWindow();
+          }
           throw err;
         }
       };
