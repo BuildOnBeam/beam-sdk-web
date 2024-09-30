@@ -266,55 +266,80 @@ export class SessionManager {
     data: unknown,
   ) {
     let operation: CommonOperationResponse | null = null;
+    let error: string | null = null;
 
-    try {
-      this.log('Requesting signature');
+    return this.withConfirmationScreen()(async () => {
+      try {
+        this.log('Requesting signature');
 
-      const type =
-        typeof data === 'string'
-          ? CreateOperationInputTransactionsItemType.OpenfortTransaction
-          : CreateOperationInputTransactionsItemType.OpenfortReservoirOrder;
+        const type =
+          typeof data === 'string'
+            ? CreateOperationInputTransactionsItemType.OpenfortTransaction
+            : CreateOperationInputTransactionsItemType.OpenfortReservoirOrder;
 
-      const result = await this.#connectionApi.createOperation({
-        accountAddress,
-        chainId,
-        transactions: [
-          {
-            data,
-            type,
-          },
-        ],
-        operationProcessing: CreateOperationInputOperationProcessing.SignOnly,
-      });
+        const result = await this.#connectionApi.createOperation({
+          accountAddress,
+          chainId,
+          transactions: [
+            {
+              data,
+              type,
+            },
+          ],
+          operationProcessing: CreateOperationInputOperationProcessing.SignOnly,
+        });
 
-      if (result) operation = result;
-    } catch (err: unknown) {
-      this.log(
-        `Failed to sign transaction: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
-    }
+        if (result) operation = result;
+      } catch (err: unknown) {
+        this.log(
+          `Failed to sign transaction: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
+      }
 
-    if (!operation) {
-      this.log('Failed to get operation');
+      if (!operation) {
+        this.log('Failed to get operation');
 
-      throw new Error('Failed to get operation');
-    }
+        throw new Error('Failed to get operation');
+      }
 
-    operation = await this.signOperationUsingBrowser(operation);
+      try {
+        this.log(`Signing operation using browser: ${operation.id}`);
 
-    if (operation.status !== CommonOperationResponseStatus.Signed) {
-      throw new Error(`Operation failed with status: ${operation.status}`);
-    }
+        const result = await this.#confirm.signOperation(operation.url);
 
-    const [transaction] = operation.transactions;
+        this.log(`Operation signed: ${result.confirmed}`);
 
-    if (!transaction.signature) {
-      throw new Error('No signature found in transaction');
-    }
+        if (!result.confirmed) {
+          throw new Error('Unable to sign operation');
+        }
+      } catch (err: unknown) {
+        this.log(
+          `Failed to sign operation: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
 
-    return transaction.signature;
+        error = err instanceof Error ? err.message : 'Unknown error.';
+      }
+
+      if (error) throw new Error(error);
+
+      operation = await this.api.getOperation(operation.id);
+
+      if (operation.status !== CommonOperationResponseStatus.Signed) {
+        throw new Error(`Operation failed with status: ${operation.status}`);
+      }
+
+      const [transaction] = operation.transactions;
+
+      if (!transaction.signature) {
+        throw new Error('No signature found in transaction');
+      }
+
+      return transaction.signature;
+    });
   }
 
   /**
@@ -331,33 +356,58 @@ export class SessionManager {
     interaction: CreateTransactionInputInteractionsItem,
   ) {
     let operation: CommonOperationResponse | null = null;
+    let error: string | null = null;
 
-    try {
-      this.log('Sending transaction');
+    return this.withConfirmationScreen()(async () => {
+      try {
+        this.log('Sending transaction');
 
-      const result = await this.#connectionApi.createTransactionForAddress({
-        accountAddress,
-        chainId,
-        sponsor,
-        interactions: [interaction],
-      });
+        const result = await this.#connectionApi.createTransactionForAddress({
+          accountAddress,
+          chainId,
+          sponsor,
+          interactions: [interaction],
+        });
 
-      if (result) operation = result;
-    } catch (err: unknown) {
-      this.log(
-        `Failed to execute step: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
-    }
+        if (result) operation = result;
+      } catch (err: unknown) {
+        this.log(
+          `Failed to execute step: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
+      }
 
-    if (!operation) {
-      this.log('Failed to get operation');
+      if (!operation) {
+        this.log('Failed to get operation');
 
-      throw new Error('Failed to get operation');
-    }
+        throw new Error('Failed to get operation');
+      }
 
-    return this.signOperationUsingBrowser(operation);
+      try {
+        this.log(`Signing operation using browser: ${operation.id}`);
+
+        const result = await this.#confirm.signOperation(operation.url);
+
+        this.log(`Operation signed: ${result.confirmed}`);
+
+        if (!result.confirmed) {
+          throw new Error('Unable to sign operation');
+        }
+      } catch (err: unknown) {
+        this.log(
+          `Failed to sign operation: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
+
+        error = err instanceof Error ? err.message : 'Unknown error.';
+      }
+
+      if (error) throw new Error(error);
+
+      return this.api.getOperation(operation.id);
+    });
   }
 
   /**
@@ -594,6 +644,12 @@ export class SessionManager {
       this.withConfirmationScreenTask(popupWindowSize)(task)();
   }
 
+  /**
+   * Async function that wraps a task with a confirmation screen, while
+   * also initially opening the confirmation loading screen.
+   * @param popupWindowSize
+   * @returns
+   */
   public withConfirmationScreenTask(popupWindowSize?: {
     width: number;
     height: number;
@@ -611,6 +667,11 @@ export class SessionManager {
       };
   }
 
+  /**
+   * Log a message if debug is enabled
+   * @param message
+   * @returns
+   */
   private log(message: string) {
     if (!this.#config.debug) return;
 
