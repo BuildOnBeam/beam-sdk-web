@@ -23,6 +23,7 @@ const getCloseButton = (): string => `
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        text-shadow: none !important;
       "
     >
       ${CLOSE_BUTTON_SVG}
@@ -37,6 +38,7 @@ const getBlockedContents = () => `
         align-items: center !important;
         gap: 4px !important;
         margin-bottom: 10px !important;
+        text-shadow: none !important;
       "
     >
       ${POPUP_BLOCKED_SVG}
@@ -46,6 +48,7 @@ const getBlockedContents = () => `
         color: #b6b6b6 !important;
         text-align: center !important;
         margin: 0 !important;
+        text-shadow: none !important;
       "
     >
       Please try again below.<br />
@@ -59,6 +62,7 @@ const getGenericContents = () => `
         color: #b6b6b6 !important;
         text-align: center !important;
         margin: 0 !important;
+        text-shadow: none !important;
       "
     >
       Secure pop-up not showing?<br />Try again below.
@@ -78,6 +82,7 @@ const getTryAgainButton = () => `
         font-size: 1em !important;
         font-weight: 500 !important;
         cursor: pointer !important;
+        text-shadow: none !important;
       "
     >
       Try again
