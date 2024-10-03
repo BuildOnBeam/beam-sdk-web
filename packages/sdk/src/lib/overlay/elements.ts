@@ -11,7 +11,6 @@ const getCloseButton = (): string => `
     <button
       id="${BEAM_OVERLAY_CLOSE_ID}"
       style="
-        pointer-events: auto !important;
         background: #f3f3f326 !important;
         border: none !important;
         border-radius: 50% !important;
@@ -94,6 +93,7 @@ const getOverlay = (contents: string): string => `
     <div
       id="${BEAM_OVERLAY_ID}"
       style="
+        pointer-events: auto !important;
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
