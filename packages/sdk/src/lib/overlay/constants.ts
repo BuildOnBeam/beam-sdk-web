@@ -287,12 +287,12 @@ export const STYLE_SHEET = `
 
   .button {
     background: linear-gradient(178deg,color-mix(in srgb,var(--beam-colors-mono-0) 11%,transparent) 1.34%,color-mix(in srgb,var(--beam-colors-mono-0) 25%,transparent) 5.7%,transparent 45.31%,transparent 77.57%),var(--beam-colors-mono-550);
-    padding-inline: var(--beam-spacing-8);
-    padding-block: var(--beam-spacing-2);
-    font-size: 1rem;
+    padding-block: var(--beam-spacing-1);
+    padding-inline: var(--beam-spacing-4);
+    font-size: .75rem;
     font-family: var(--beam-fonts-main);
     font-weight: 400;
-    line-height: 28px;
+    line-height: 18px;
     display: flex;
     gap: var(--beam-spacing-1);
     position: relative;

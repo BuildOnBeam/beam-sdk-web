@@ -20,21 +20,21 @@ const BLOCKED_CONTENTS = `
     <p class="text text--error">pop-up blocked</p>
   </div>
   <p class="text">
-    please try again below<br />
-    if the problem continues, adjust your<br />
-    browser settings to allow pop-ups
+    if this keeps happening, modify your
+    <br />
+    browser settings to enable pop-ups
   </p>
 `;
 
 const GENERIC_CONTENTS = `
   <p class="text">
-    secure pop-up not showing?<br />try again below
+    pop-up blocked?
   </p>
 `;
 
 const TRY_AGAIN_BUTTON = `
   <button id="${BEAM_OVERLAY_TRY_AGAIN_ID}" class="button">
-    try again
+    retry
   </button>
 `;
 
