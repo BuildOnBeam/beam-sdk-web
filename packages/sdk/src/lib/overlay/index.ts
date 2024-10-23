@@ -1,5 +1,10 @@
 import { PopupOverlayOptions } from './types';
-import { BEAM_OVERLAY_CLOSE_ID, BEAM_OVERLAY_TRY_AGAIN_ID } from './constants';
+import {
+  BEAM_OVERLAY_CLOSE_ID,
+  BEAM_OVERLAY_ID,
+  BEAM_OVERLAY_TRY_AGAIN_ID,
+  STYLE_SHEET,
+} from './constants';
 import { addLink, getBlockedOverlay, getGenericOverlay } from './elements';
 
 export default class Overlay {
@@ -27,11 +32,10 @@ export default class Overlay {
   }
 
   append(tryAgainOnClick: () => void, onCloseClick: () => void) {
-    if (this.shouldAppendOverlay()) {
-      this.appendOverlay();
-      this.updateTryAgainButton(tryAgainOnClick);
-      this.updateCloseButton(onCloseClick);
-    }
+    if (!this.shouldAppendOverlay()) return;
+    this.appendOverlay();
+    this.updateTryAgainButton(tryAgainOnClick);
+    this.updateCloseButton(onCloseClick);
   }
 
   update(tryAgainOnClick: () => void) {
@@ -39,9 +43,8 @@ export default class Overlay {
   }
 
   remove() {
-    if (this.overlay) {
-      this.overlay.remove();
-    }
+    if (!this.overlay) return;
+    this.overlay.remove();
   }
 
   private shouldAppendOverlay(): boolean {
@@ -53,47 +56,53 @@ export default class Overlay {
   }
 
   private appendOverlay() {
-    if (!this.overlay) {
-      addLink({ id: 'link-googleapis', href: 'https://fonts.googleapis.com' });
-      addLink({
-        id: 'link-gstatic',
-        href: 'https://fonts.gstatic.com',
-        crossOrigin: 'anonymous',
-      });
-      addLink({
-        id: 'link-roboto',
-        href: 'https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap',
-        rel: 'stylesheet',
-      });
+    if (this.overlay) return;
+    addLink({ id: 'link-googleapis', href: 'https://fonts.googleapis.com' });
+    addLink({
+      id: 'link-gstatic',
+      href: 'https://fonts.gstatic.com',
+      crossOrigin: 'anonymous',
+    });
+    addLink({
+      id: 'link-roboto',
+      href: 'https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap',
+      rel: 'stylesheet',
+    });
 
-      const overlay = document.createElement('div');
-      overlay.innerHTML = this.isBlockedOverlay
-        ? getBlockedOverlay()
-        : getGenericOverlay();
-      document.body.insertAdjacentElement('beforeend', overlay);
-      this.overlay = overlay;
-    }
+    const overlay = document.createElement('div');
+    overlay.setAttribute('id', BEAM_OVERLAY_ID);
+    const shadow = overlay.attachShadow({ mode: 'open' });
+    shadow.innerHTML = this.isBlockedOverlay
+      ? getBlockedOverlay()
+      : getGenericOverlay();
+    const styleSheet = new CSSStyleSheet();
+    styleSheet.replaceSync(STYLE_SHEET);
+    shadow.adoptedStyleSheets = [styleSheet];
+    document.body.insertAdjacentElement('beforeend', overlay);
+    this.overlay = overlay;
   }
 
   private updateTryAgainButton(tryAgainOnClick: () => void) {
-    const tryAgainButton = document.getElementById(BEAM_OVERLAY_TRY_AGAIN_ID);
-    if (tryAgainButton) {
-      if (this.tryAgainListener) {
-        tryAgainButton.removeEventListener('click', this.tryAgainListener);
-      }
-      this.tryAgainListener = tryAgainOnClick;
-      tryAgainButton.addEventListener('click', tryAgainOnClick);
+    const tryAgainButton = this.overlay?.shadowRoot?.getElementById(
+      BEAM_OVERLAY_TRY_AGAIN_ID,
+    );
+    if (!tryAgainButton) return;
+    if (this.tryAgainListener) {
+      tryAgainButton.removeEventListener('click', this.tryAgainListener);
     }
+    this.tryAgainListener = tryAgainOnClick;
+    tryAgainButton.addEventListener('click', tryAgainOnClick);
   }
 
   private updateCloseButton(onCloseClick: () => void) {
-    const closeButton = document.getElementById(BEAM_OVERLAY_CLOSE_ID);
-    if (closeButton) {
-      if (this.onCloseListener) {
-        closeButton.removeEventListener('click', this.onCloseListener);
-      }
-      this.onCloseListener = onCloseClick;
-      closeButton.addEventListener('click', onCloseClick);
+    const closeButton = this.overlay?.shadowRoot?.getElementById(
+      BEAM_OVERLAY_CLOSE_ID,
+    );
+    if (!closeButton) return;
+    if (this.onCloseListener) {
+      closeButton.removeEventListener('click', this.onCloseListener);
     }
+    this.onCloseListener = onCloseClick;
+    closeButton.addEventListener('click', onCloseClick);
   }
 }
