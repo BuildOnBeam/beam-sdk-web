@@ -130,7 +130,7 @@ export class BeamProvider implements Provider {
 
           const [action] = operation.actions;
 
-          if (!('transaction' in action)) {
+          if ('transaction' in action === false) {
             throw new Error('Could not find the transaction');
           }
 
