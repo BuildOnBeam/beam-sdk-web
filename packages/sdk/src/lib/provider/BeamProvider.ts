@@ -128,7 +128,13 @@ export class BeamProvider implements Provider {
             transaction,
           );
 
-          return operation.transactions[0].transactionHash;
+          const [action] = operation.actions;
+
+          if (!('transaction' in action)) {
+            throw new Error('Could not find the transaction');
+          }
+
+          return action.transaction.hash;
         } catch (error: unknown) {
           throw new JsonRpcError(
             RpcErrorCode.INTERNAL_ERROR,
@@ -151,7 +157,7 @@ export class BeamProvider implements Provider {
         const data = parseAndValidateTypedData(request.params?.[1], chainId);
 
         try {
-          const signature = await this.#sessionManager.signTransaction(
+          const signature = await this.#sessionManager.signMessageOrData(
             chainId,
             this.#accounts[chainId],
             data,
@@ -161,7 +167,7 @@ export class BeamProvider implements Provider {
         } catch (error: unknown) {
           throw new JsonRpcError(
             RpcErrorCode.INTERNAL_ERROR,
-            `Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Failed to provide signature: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
       }
@@ -178,7 +184,7 @@ export class BeamProvider implements Provider {
         try {
           const [message] = request.params as [`0x${string}` | Uint8Array];
 
-          const signature = await this.#sessionManager.signTransaction(
+          const signature = await this.#sessionManager.signMessageOrData(
             chainId,
             this.#accounts[chainId],
             message,
@@ -188,7 +194,7 @@ export class BeamProvider implements Provider {
         } catch (error: unknown) {
           throw new JsonRpcError(
             RpcErrorCode.INTERNAL_ERROR,
-            `Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Failed to provide signature: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
       }

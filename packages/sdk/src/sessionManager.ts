@@ -1,4 +1,10 @@
-import { Hex, hashMessage, serializeSignature, verifyMessage } from 'viem';
+import {
+  Hex,
+  hashMessage,
+  serializeSignature,
+  verifyMessage,
+  verifyTypedData,
+} from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { getConnectionAPI } from './lib/api/beam.connection-api.generated';
@@ -14,11 +20,7 @@ import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
-import {
-  CreateOperationInputOperationProcessing,
-  CreateOperationInputTransactionsItemType,
-  CreateTransactionInputInteractionsItem,
-} from './lib/api/beam.connection-api.types.generated';
+import { CreateTransactionInputInteractionsItem } from './lib/api/beam.connection-api.types.generated';
 
 export type SessionManagerInput = {
   config: BeamConfiguration;
@@ -255,16 +257,13 @@ export class SessionManager {
   }
 
   /**
-   * Sign a transaction
-   * @param message
-   * @returns string
+   * Sign a message or typed data
+   * @param chainId
+   * @param accountAddress account abstraction getAddress
+   * @param data message or typed data
+   * @returns string (signature)
    */
-  async signTransaction(
-    chainId: number,
-    accountAddress: string,
-    // TODO type
-    data: unknown,
-  ) {
+  async signMessageOrData(chainId: number, accountAddress: string, data: any) {
     let operation: CommonOperationResponse | null = null;
     let error: string | null = null;
 
@@ -272,21 +271,18 @@ export class SessionManager {
       try {
         this.log('Requesting signature');
 
-        const type =
-          typeof data === 'string'
-            ? CreateOperationInputTransactionsItemType.OpenfortTransaction
-            : CreateOperationInputTransactionsItemType.OpenfortReservoirOrder;
-
         const result = await this.#connectionApi.createOperation({
           accountAddress,
           chainId,
-          transactions: [
+          actions: [
             {
-              data,
-              type,
+              type: 'Sign',
+              signature: {
+                data: data,
+                type: (await verifyTypedData(data)) ? 'TypedData' : 'Message',
+              },
             },
           ],
-          operationProcessing: CreateOperationInputOperationProcessing.SignOnly,
         });
 
         if (result) operation = result;
@@ -328,17 +324,17 @@ export class SessionManager {
 
       operation = await this.api.getOperation(operation.id);
 
-      if (operation.status !== CommonOperationResponseStatus.Signed) {
+      if (operation.status !== CommonOperationResponseStatus.Executed) {
         throw new Error(`Operation failed with status: ${operation.status}`);
       }
 
-      const [transaction] = operation.transactions;
+      const [{ signature: signatureRequest }] = operation.actions;
 
-      if (!transaction.signature) {
+      if (!signatureRequest.signature) {
         throw new Error('No signature found in transaction');
       }
 
-      return transaction.signature;
+      return signatureRequest.signature;
     });
   }
 
@@ -468,8 +464,8 @@ export class SessionManager {
     operation: CommonOperationResponse,
     privateKey: Hex,
   ) {
-    if (!operation.transactions.length) {
-      throw new Error('No transactions found in operation');
+    if (!operation.actions.length) {
+      throw new Error('No actions found in operation');
     }
 
     let error: string | null = null;
@@ -477,28 +473,27 @@ export class SessionManager {
     const actions: ConfirmOperationRequestActionsItem[] = [];
 
     for (const action of operation.actions) {
-      if ('transaction' in action) {
-        try {
-          const signature = serializeSignature(
-            await sign({
-              hash: action.signature.hash as Hex,
-              privateKey,
-            }),
-          );
+      /** if there's nothing to sign, skip to the next */
+      if ('signature' in action === false) continue;
+      try {
+        const signature = serializeSignature(
+          await sign({
+            hash: action.signature.hash as Hex,
+            privateKey,
+          }),
+        );
+        actions.push({
+          id: action.id,
+          signature,
+        });
+      } catch (err: unknown) {
+        this.log(
+          `Failed to provide signature: ${
+            err instanceof Error ? err.message : 'Unknown error.'
+          }`,
+        );
 
-          actions.push({
-            id: action.id,
-            signature,
-          });
-        } catch (err: unknown) {
-          this.log(
-            `Failed to sign transaction: ${
-              err instanceof Error ? err.message : 'Unknown error.'
-            }`,
-          );
-
-          error = err instanceof Error ? err.message : 'Unknown error.';
-        }
+        error = err instanceof Error ? err.message : 'Unknown error.';
       }
     }
 
