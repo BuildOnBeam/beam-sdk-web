@@ -6,7 +6,7 @@ import {
   CommonOperationResponse,
   CommonOperationResponseStatus,
   ConfirmOperationRequestStatus,
-  ConfirmOperationRequestTransactionsItem,
+  ConfirmOperationRequestActionsItem,
   GenerateSessionRequestResponse,
 } from './lib/api/beam.player-api.types.generated';
 import { BeamConfiguration } from './lib/config';
@@ -474,29 +474,31 @@ export class SessionManager {
 
     let error: string | null = null;
 
-    const transactions: ConfirmOperationRequestTransactionsItem[] = [];
+    const actions: ConfirmOperationRequestActionsItem[] = [];
 
-    for (const tx of operation.transactions) {
-      try {
-        const signature = serializeSignature(
-          await sign({
-            hash: tx.hash as Hex,
-            privateKey,
-          }),
-        );
+    for (const action of operation.actions) {
+      if ('transaction' in action) {
+        try {
+          const signature = serializeSignature(
+            await sign({
+              hash: action.signature.hash as Hex,
+              privateKey,
+            }),
+          );
 
-        transactions.push({
-          id: tx.id,
-          signature,
-        });
-      } catch (err: unknown) {
-        this.log(
-          `Failed to sign transaction: ${
-            err instanceof Error ? err.message : 'Unknown error.'
-          }`,
-        );
+          actions.push({
+            id: action.id,
+            signature,
+          });
+        } catch (err: unknown) {
+          this.log(
+            `Failed to sign transaction: ${
+              err instanceof Error ? err.message : 'Unknown error.'
+            }`,
+          );
 
-        error = err instanceof Error ? err.message : 'Unknown error.';
+          error = err instanceof Error ? err.message : 'Unknown error.';
+        }
       }
     }
 
@@ -505,7 +507,7 @@ export class SessionManager {
     try {
       const result = await this.api.processOperation(operation.id, {
         status: ConfirmOperationRequestStatus.Pending,
-        transactions,
+        actions,
       });
 
       const hasFailed =
