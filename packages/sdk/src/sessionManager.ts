@@ -1,10 +1,4 @@
-import {
-  Hex,
-  hashMessage,
-  serializeSignature,
-  verifyMessage,
-  verifyTypedData,
-} from 'viem';
+import { Hex, hashMessage, serializeSignature, verifyMessage } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { getConnectionAPI } from './lib/api/beam.connection-api.generated';
@@ -279,7 +273,7 @@ export class SessionManager {
               type: 'Sign',
               signature: {
                 data: data,
-                type: (await verifyTypedData(data)) ? 'TypedData' : 'Message',
+                type: typeof data === 'string' ? 'Message' : 'TypedData',
               },
             },
           ],
@@ -288,7 +282,7 @@ export class SessionManager {
         if (result) operation = result;
       } catch (err: unknown) {
         this.log(
-          `Failed to sign transaction: ${
+          `Failed to provide signature: ${
             err instanceof Error ? err.message : 'Unknown error.'
           }`,
         );
