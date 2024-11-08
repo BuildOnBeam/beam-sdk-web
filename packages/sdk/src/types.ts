@@ -1,8 +1,8 @@
 export enum ChainId {
   BEAM_MAINNET = 4337,
   BEAM_TESTNET = 13337,
-  SOPHON_MAINNET = 4337,
-  SOPHON_TESTNET = 13337,
+  SOPHON_MAINNET = 50104,
+  SOPHON_TESTNET = 531050104,
 }
 
 export enum ChainName {
