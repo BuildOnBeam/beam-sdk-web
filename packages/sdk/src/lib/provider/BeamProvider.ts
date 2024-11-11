@@ -27,8 +27,6 @@ export class BeamProvider implements Provider {
 
   readonly #eventEmitter: TypedEventEmitter<ProviderEventMap>;
 
-  #rpcProvider: StaticJsonRpcProvider;
-
   // Account abstractions per chainId
   #accounts: Record<number, string> = {};
 
@@ -39,17 +37,17 @@ export class BeamProvider implements Provider {
 
     this.#sessionManager = sessionManager;
 
-    this.#rpcProvider = new StaticJsonRpcProvider(
-      this.#config.getChainConfig().rpcUrl,
-    );
-
     this.#eventEmitter = new TypedEventEmitter<ProviderEventMap>();
+  }
+
+  #getProvider() {
+    return new StaticJsonRpcProvider(this.#config.getChainConfig().rpcUrl);
   }
 
   async #performRequest(request: RequestArguments): Promise<any> {
     switch (request.method) {
       case 'eth_requestAccounts': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
 
         if (this.#accounts[chainId]) {
           return [this.#accounts[chainId]];
@@ -86,7 +84,7 @@ export class BeamProvider implements Provider {
       }
 
       case 'eth_accounts': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
 
         if (this.#accounts[chainId]) {
           return [this.#accounts[chainId]];
@@ -107,7 +105,7 @@ export class BeamProvider implements Provider {
       }
 
       case 'eth_sendTransaction': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
         const { sponsor } = this.#config.getChainConfig();
 
         if (!this.#accounts[chainId]) {
@@ -139,7 +137,7 @@ export class BeamProvider implements Provider {
 
       case 'eth_signTypedData':
       case 'eth_signTypedData_v4': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
 
         if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
@@ -167,7 +165,7 @@ export class BeamProvider implements Provider {
       }
 
       case 'personal_sign': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
 
         if (!this.#accounts[chainId]) {
           throw new JsonRpcError(
@@ -194,7 +192,7 @@ export class BeamProvider implements Provider {
       }
 
       case 'eth_chainId': {
-        const { chainId } = await this.#rpcProvider.detectNetwork();
+        const { chainId } = await this.#getProvider().detectNetwork();
         return toHex(chainId);
       }
 
@@ -213,10 +211,6 @@ export class BeamProvider implements Provider {
           this.disconnect();
 
           this.#config.setChainId(chainId);
-
-          this.#rpcProvider = new StaticJsonRpcProvider(
-            this.#config.getChainConfig().rpcUrl,
-          );
 
           const [address] = await this.#performRequest({
             method: 'eth_requestAccounts',
@@ -249,7 +243,7 @@ export class BeamProvider implements Provider {
       case 'eth_getTransactionByHash':
       case 'eth_getTransactionReceipt':
       case 'eth_getTransactionCount': {
-        return this.#rpcProvider.send(request.method, request.params || []);
+        return this.#getProvider().send(request.method, request.params || []);
       }
       default: {
         throw new JsonRpcError(
