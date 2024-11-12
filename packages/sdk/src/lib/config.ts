@@ -41,6 +41,11 @@ export class BeamConfiguration {
 
   getChainConfig() {
     const chainId = this.chainId;
+
+    if (!chainId) {
+      throw new Error('ChainId not configured, call setChainId first');
+    }
+
     const chain = this.chains.find((chain) => chain.id === chainId);
 
     if (!chain) {
