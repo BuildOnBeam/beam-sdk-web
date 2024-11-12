@@ -4,7 +4,7 @@ import { ChainId } from '../types';
 export class BeamConfiguration {
   readonly chains: ClientConfig['chains'];
 
-  #chainId: ChainId;
+  #chainId?: ChainId;
 
   readonly debug?: boolean;
 
