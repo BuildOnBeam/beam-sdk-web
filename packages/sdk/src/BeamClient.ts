@@ -55,17 +55,17 @@ export class BeamClient {
   }
 
   /**
-   * Get the current chainId
+   * Get the current chain configuration
    */
-  public get chainId() {
-    return this.#config.chainId;
+  public get chain() {
+    return this.#config.getChainConfig();
   }
 
   /**
    * Set the chainId for the current client
    * @param chainId
    */
-  public setChainId(chainId: ChainId) {
+  public switchChain(chainId: ChainId) {
     if (this.#config.chainId === chainId) return;
 
     this.#config.setChainId(chainId);
