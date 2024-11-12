@@ -22,7 +22,7 @@ export class BeamConfiguration {
       throw new Error(`Chain ${config.chainId} not found in configuration`);
     }
 
-    this.#chainId = config.chainId ?? config.chains[0].id;
+    if (config.chainId) this.#chainId = config.chainId;
 
     this.debug = config.debug || false;
   }
