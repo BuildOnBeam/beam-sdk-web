@@ -4,7 +4,7 @@ import { ChainId } from '../types';
 export class BeamConfiguration {
   readonly chains: ClientConfig['chains'];
 
-  #chainId: ChainId;
+  #chainId?: ChainId;
 
   readonly debug?: boolean;
 
@@ -22,7 +22,7 @@ export class BeamConfiguration {
       throw new Error(`Chain ${config.chainId} not found in configuration`);
     }
 
-    this.#chainId = config.chainId ?? config.chains[0].id;
+    if (config.chainId) this.#chainId = config.chainId;
 
     this.debug = config.debug || false;
   }
@@ -41,6 +41,11 @@ export class BeamConfiguration {
 
   getChainConfig() {
     const chainId = this.chainId;
+
+    if (!chainId) {
+      throw new Error('ChainId not configured, call setChainId first');
+    }
+
     const chain = this.chains.find((chain) => chain.id === chainId);
 
     if (!chain) {

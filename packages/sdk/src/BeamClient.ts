@@ -1,5 +1,7 @@
 import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
+import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { BeamConfiguration } from './lib/config';
+import { beamIcon } from './lib/icon';
 import {
   BeamProvider,
   announceProvider,
@@ -7,9 +9,7 @@ import {
 } from './lib/provider';
 import { StorageKeys, StorageService } from './lib/storage';
 import { SessionManager } from './sessionManager';
-import { ClientConfig } from './types';
-import { getPlayerAPI } from './lib/api/beam.player-api.generated';
-import { beamIcon } from './lib/icon';
+import { ChainId, ClientConfig } from './types';
 
 export class BeamClient {
   readonly #config: BeamConfiguration;
@@ -42,14 +42,7 @@ export class BeamClient {
       storage: this.#storage,
     });
 
-    AXIOS_INSTANCE.interceptors.request.use((config) => {
-      config.baseURL = this.#config.getChainConfig().apiUrl;
-      config.headers.set(
-        'x-api-key',
-        this.#config.getChainConfig().publishableKey,
-      );
-      return config;
-    });
+    this.#setAxiosInterceptors();
   }
 
   /**
@@ -59,6 +52,25 @@ export class BeamClient {
    */
   public setStorage(storage: Storage) {
     this.#storage = new StorageService<StorageKeys>(storage);
+  }
+
+  /**
+   * Get the current chain configuration
+   */
+  public get chain() {
+    return this.#config.getChainConfig();
+  }
+
+  /**
+   * Set the chainId for the current client
+   * @param chainId
+   */
+  public switchChain(chainId: ChainId) {
+    if (this.#config.chainId === chainId) return;
+
+    this.#config.setChainId(chainId);
+
+    this.#setAxiosInterceptors();
   }
 
   /**
@@ -154,6 +166,22 @@ export class BeamClient {
       chainId,
       useBrowserFallback,
     );
+  }
+
+  /**
+   * Set the axios interceptors for the current chain
+   */
+  #setAxiosInterceptors() {
+    if (!this.#config.chainId) return;
+
+    AXIOS_INSTANCE.interceptors.request.use((config) => {
+      config.baseURL = this.#config.getChainConfig().apiUrl;
+      config.headers.set(
+        'x-api-key',
+        this.#config.getChainConfig().publishableKey,
+      );
+      return config;
+    });
   }
 
   /**
