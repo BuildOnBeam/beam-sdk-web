@@ -5,6 +5,7 @@ import './index.css';
 import { BeamClient, ClientConfig, ChainId } from '@onbeam/sdk';
 
 const config: ClientConfig = {
+  chainId: ChainId.BEAM_TESTNET,
   chains: [
     {
       id: ChainId.BEAM_TESTNET,

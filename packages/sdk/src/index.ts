@@ -1,5 +1,4 @@
 export { BeamClient } from './BeamClient';
-export { BeamConfiguration } from './lib/config';
 export { BeamProvider } from './lib/provider';
 export { ChainId, ChainConfig } from './types';
 export type { ClientConfig, Session } from './types';

@@ -39,9 +39,11 @@ pnpm add @onbeam/sdk
 Start by creating a new instance of the Beam client, and configuring it with the chains you want to use. We're using the Beam testnet chain in this example:
 
 ```typescript
-import { BeamConfiguration, ChainId } from '@onbeam/sdk';
+import { BeamClient } from '@onbeam/sdk';
+import type { ClientConfig, ChainId } from '@onbeam/sdk';
 
-const config = new BeamConfiguration({
+const config: ClientConfig = {
+  chainId: ChainId.BEAM_TESTNET,
   chains: [
     {
       id: ChainId.BEAM_TESTNET,
@@ -49,7 +51,7 @@ const config = new BeamConfiguration({
     }
   ],
   debug: true, // Logs debug information to the console
-});
+};
 
 const client = new BeamClient(config);
 ```
@@ -65,9 +67,8 @@ the `injected` connector. Then, create a new Beam client and connect the provide
 import { createConfig, http, WagmiProvider } from 'wagmi'
 import { beamTestnet } from 'viem/chains';
 import { injected } from 'wagmi/connectors';
-import { BeamConfiguration } from '@onbeam/sdk';
-import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BeamClient } from '@onbeam/sdk';
 
 // Create the wagmi config and provide the 'injected' connector
 const wagmiConfig = createConfig({
@@ -85,13 +86,10 @@ const queryClient = new QueryClient();
 // ... using the `config` from the previous example
 const beamClient = new BeamClient(config);
 
-export default function App() {
-  // Connect and announce the provider
-  useEffect(() => {
-    if (!beamClient) return;
-    beamClient.connectProvider();
-  }, []);
+// Connect and announce the provider
+beamClient.connectProvider();
 
+export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
