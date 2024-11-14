@@ -3,8 +3,8 @@ import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
 import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { getConnectionAPI } from './lib/api/beam.connection-api.generated';
 import {
-  CommonOperationResponse,
-  CommonOperationResponseStatus,
+  PlayerOperationResponse,
+  PlayerOperationResponseStatus,
   ConfirmOperationRequestStatus,
   ConfirmOperationRequestActionsItem,
   GenerateSessionRequestResponse,
@@ -258,7 +258,7 @@ export class SessionManager {
    * @returns string (signature)
    */
   async signMessageOrData(chainId: number, accountAddress: string, data: any) {
-    let operation: CommonOperationResponse | null = null;
+    let operation: PlayerOperationResponse | null = null;
     let error: string | null = null;
 
     return this.withConfirmationScreen()(async () => {
@@ -318,13 +318,13 @@ export class SessionManager {
 
       operation = await this.api.getOperation(operation.id);
 
-      if (operation.status !== CommonOperationResponseStatus.Executed) {
+      if (operation.status !== PlayerOperationResponseStatus.Executed) {
         throw new Error(`Operation failed with status: ${operation.status}`);
       }
 
       const [{ signature: signatureRequest }] = operation.actions;
 
-      if (!signatureRequest.signature) {
+      if (!signatureRequest || !signatureRequest.signature) {
         throw new Error('No signature found in transaction');
       }
 
@@ -345,7 +345,7 @@ export class SessionManager {
     sponsor: boolean,
     interaction: CreateTransactionInputInteractionsItem,
   ) {
-    let operation: CommonOperationResponse | null = null;
+    let operation: PlayerOperationResponse | null = null;
     let error: string | null = null;
 
     return this.withConfirmationScreen()(async () => {
@@ -421,7 +421,7 @@ export class SessionManager {
 
     this.log('Retrieving operation');
 
-    let operation: CommonOperationResponse | null = null;
+    let operation: PlayerOperationResponse | null = null;
 
     try {
       const result = await this.api.getOperation(operationId);
@@ -455,7 +455,7 @@ export class SessionManager {
   }
 
   private async signOperationUsingSession(
-    operation: CommonOperationResponse,
+    operation: PlayerOperationResponse,
     privateKey: Hex,
   ) {
     if (!operation.actions.length) {
@@ -468,7 +468,7 @@ export class SessionManager {
 
     for (const action of operation.actions) {
       /** if there's nothing to sign, skip to the next */
-      if ('signature' in action === false) continue;
+      if (!action.signature) continue;
       try {
         const signature = serializeSignature(
           await sign({
@@ -500,9 +500,9 @@ export class SessionManager {
       });
 
       const hasFailed =
-        result.status !== CommonOperationResponseStatus.Executed &&
-        result.status !== CommonOperationResponseStatus.Signed &&
-        result.status !== CommonOperationResponseStatus.Pending;
+        result.status !== PlayerOperationResponseStatus.Executed &&
+        result.status !== PlayerOperationResponseStatus.Signed &&
+        result.status !== PlayerOperationResponseStatus.Pending;
 
       if (hasFailed) {
         throw new Error(`Operation failed with status: ${result.status}`);
@@ -524,7 +524,7 @@ export class SessionManager {
     return this.api.getOperation(operation.id);
   }
 
-  private async signOperationUsingBrowser(operation: CommonOperationResponse) {
+  private async signOperationUsingBrowser(operation: PlayerOperationResponse) {
     let error: string | null = null;
 
     return this.withConfirmationScreen()(async () => {
