@@ -1,4 +1,3 @@
-import { AXIOS_INSTANCE } from './lib/api/beam-axios-client';
 import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { BeamConfiguration } from './lib/config';
 import { beamIcon } from './lib/icon';
@@ -41,8 +40,6 @@ export class BeamClient {
       config: this.#config,
       storage: this.#storage,
     });
-
-    this.#setAxiosInterceptors();
   }
 
   /**
@@ -69,8 +66,6 @@ export class BeamClient {
     if (this.#config.chainId === chainId) return;
 
     this.#config.setChainId(chainId);
-
-    this.#setAxiosInterceptors();
   }
 
   /**
@@ -166,22 +161,6 @@ export class BeamClient {
       chainId,
       useBrowserFallback,
     );
-  }
-
-  /**
-   * Set the axios interceptors for the current chain
-   */
-  #setAxiosInterceptors() {
-    if (!this.#config.chainId) return;
-
-    AXIOS_INSTANCE.interceptors.request.use((config) => {
-      config.baseURL = this.#config.getChainConfig().apiUrl;
-      config.headers.set(
-        'x-api-key',
-        this.#config.getChainConfig().publishableKey,
-      );
-      return config;
-    });
   }
 
   /**
