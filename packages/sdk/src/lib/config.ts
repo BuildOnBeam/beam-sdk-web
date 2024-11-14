@@ -1,5 +1,6 @@
 import { ClientConfig } from '../types';
 import { ChainId } from '../types';
+import { AXIOS_INSTANCE } from '../lib/api/beam-axios-client';
 
 export class BeamConfiguration {
   readonly chains: ClientConfig['chains'];
@@ -15,14 +16,7 @@ export class BeamConfiguration {
 
     this.chains = config.chains;
 
-    if (
-      config.chainId &&
-      !config.chains.find((chain) => chain.id === config.chainId)
-    ) {
-      throw new Error(`Chain ${config.chainId} not found in configuration`);
-    }
-
-    if (config.chainId) this.#chainId = config.chainId;
+    if (config.chainId) this.setChainId(config.chainId);
 
     this.debug = config.debug || false;
   }
@@ -37,6 +31,8 @@ export class BeamConfiguration {
     }
 
     this.#chainId = chainId;
+
+    this.#setAxiosInterceptors();
   }
 
   getChainConfig() {
@@ -109,5 +105,18 @@ export class BeamConfiguration {
           rpcUrl: 'https://build.onbeam.com/rpc/testnet',
         };
     }
+  }
+
+  /**
+   * Set the axios interceptors for the current chain
+   */
+  #setAxiosInterceptors() {
+    if (!this.chainId) return;
+
+    AXIOS_INSTANCE.interceptors.request.use((config) => {
+      config.baseURL = this.getChainConfig().apiUrl;
+      config.headers.set('x-api-key', this.getChainConfig().publishableKey);
+      return config;
+    });
   }
 }
