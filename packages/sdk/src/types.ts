@@ -26,7 +26,7 @@ export type ChainConfig = {
 export type ClientConfig = {
   /** The chains the SDK can connect to. At least one chain should be defined */
   chains: ChainConfig;
-  /** Optionally define a chainId to connect to by default. If omitted, the first defined chain is set to the active chain. */
+  /** Optionally define a chainId to connect to by default. */
   chainId?: ChainId;
   /** Set to true to output logs */
   debug?: boolean;
