@@ -6,6 +6,7 @@ import {
   announceProvider,
   beamProviderInfo,
 } from './lib/provider';
+import { WindowProvider } from './lib/provider/types';
 import { StorageKeys, StorageService } from './lib/storage';
 import { SessionManager } from './sessionManager';
 import { ChainId, ClientConfig } from './types';
@@ -18,6 +19,8 @@ export class BeamClient {
   readonly api = getPlayerAPI();
 
   #storage: StorageService<StorageKeys>;
+
+  readonly WINDOW_NS = 'beam';
 
   constructor(config: ClientConfig) {
     this.#config = new BeamConfiguration(config);
@@ -90,6 +93,10 @@ export class BeamClient {
         info: beamProviderInfo,
         provider,
       });
+    }
+
+    if (typeof window !== 'undefined') {
+      (window as WindowProvider)[this.WINDOW_NS] = { provider };
     }
 
     return provider;
