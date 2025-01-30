@@ -100,7 +100,8 @@ export class BeamConfiguration {
         return {
           publishableKey: chain.publishableKey,
           sponsor: chain.sponsor ?? false,
-          authUrl: 'https://identity.testnet.onbeam.com',
+          // authUrl: 'https://identity.testnet.onbeam.com',
+          authUrl: 'http://localhost:3000',
           apiUrl: 'https://api.testnet.onbeam.com',
           rpcUrl: 'https://build.onbeam.com/rpc/testnet',
         };

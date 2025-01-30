@@ -66,7 +66,13 @@ export class SessionManager {
           message: hashMessage(message) as Hex,
         });
 
-        const result = await this.#confirm.requestConnection(connection.url);
+        const url = new URL(connection.url);
+        url.protocol = 'http';
+        url.host = 'localhost:3000';
+
+        url.searchParams.append('keepOpen', '1');
+
+        const result = await this.#confirm.requestConnection(url.toString());
 
         const verified = await verifyMessage({
           message,
@@ -297,7 +303,12 @@ export class SessionManager {
       try {
         this.log(`Signing operation using browser: ${operation.id}`);
 
-        const result = await this.#confirm.signOperation(operation.url);
+        const url = new URL(operation.url);
+        url.protocol = 'http';
+        url.host = 'localhost:3000';
+        url.searchParams.append('autoConfirm', '1');
+
+        const result = await this.#confirm.signOperation(url.toString());
 
         this.log(`Operation signed: ${result.confirmed}`);
 
