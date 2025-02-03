@@ -93,3 +93,8 @@ export interface EIP6963AnnounceProviderEvent
   extends CustomEvent<EIP6963ProviderDetail> {
   type: 'eip6963:announceProvider';
 }
+
+export type WindowProvider = {
+  beam?: { provider: Provider } | undefined;
+  providers?: any[] | undefined; // Adjust the type as needed
+};
