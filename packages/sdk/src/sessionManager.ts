@@ -104,7 +104,7 @@ export class SessionManager {
   /**
    * Returns a stored address for a chainId
    * @param chainId
-   * @returns
+   * @returns string | null
    */
   getAddress(chainId: number) {
     const stored = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
@@ -129,7 +129,7 @@ export class SessionManager {
    * @param address
    * @param ownerAddress
    * @param chainId
-   * @returns
+   * @returns Promise<boolean>
    */
   async verifyOwnership(
     address: string,
@@ -148,7 +148,7 @@ export class SessionManager {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
   async getActiveSession(entityId: string, chainId: number) {
     const { session } = await this.getActiveSessionAndKeys(entityId, chainId);
@@ -171,7 +171,7 @@ export class SessionManager {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
   async createSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
@@ -248,7 +248,8 @@ export class SessionManager {
    * Revoke the current session
    * @param entityId
    * @param chainId
-   * @returns boolean
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
    */
   async revokeSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
@@ -337,9 +338,10 @@ export class SessionManager {
 
   /**
    * Connect a user to the game by creating and monitoring a connection request
-   * @param entityId The game's entity ID
-   * @param chainId The chain ID
-   * @returns Promise<boolean> indicating if the connection was successful
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
    */
   async connectUserToGame(entityId: string, chainId: number) {
     this.log('Connecting user to game');
@@ -394,7 +396,8 @@ export class SessionManager {
    * @param chainId
    * @param accountAddress account abstraction getAddress
    * @param data message or typed data
-   * @returns string (signature)
+   * @throws Error
+   * @returns Promise<string> (signature)
    */
   async signMessageOrData(chainId: number, accountAddress: string, data: any) {
     let operation: PlayerOperationResponse | null = null;
@@ -477,7 +480,8 @@ export class SessionManager {
    * @param accountAddress
    * @param chainId
    * @param interaction
-   * @returns
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
    */
   async sendTransaction(
     accountAddress: string,
@@ -546,8 +550,9 @@ export class SessionManager {
    * @param entityId
    * @param operationId
    * @param chainId
+   * @param useBrowserFallback
    * @throws Error
-   * @returns boolean
+   * @returns Promise<PlayerOperationResponse>
    */
   async signOperation(
     entityId: string,
@@ -595,6 +600,13 @@ export class SessionManager {
     );
   }
 
+  /**
+   * Sign an operation using a session
+   * @param operation
+   * @param privateKey
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
+   */
   private async signOperationUsingSession(
     operation: PlayerOperationResponse,
     privateKey: Hex,
@@ -665,6 +677,12 @@ export class SessionManager {
     return this.api.getOperation(operation.id);
   }
 
+  /**
+   * Sign an operation using the browser
+   * @param operation
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
+   */
   private async signOperationUsingBrowser(operation: PlayerOperationResponse) {
     let error: string | null = null;
 
@@ -701,7 +719,8 @@ export class SessionManager {
    * Get active session and keys. If a session is not valid, it will try to get a new one. If that fails, only a key will be returned.
    * @param entityId
    * @param chainId
-   * @returns
+   * @throws Error
+   * @returns Promise<{ session: Session | null, key: Hex }>
    */
   private async getActiveSessionAndKeys(entityId: string, chainId: number) {
     let session: Session | null = null;
@@ -750,7 +769,8 @@ export class SessionManager {
   /**
    * Get or create a signing key
    * @param refresh
-   * @returns
+   * @throws Error
+   * @returns Hex
    */
   private getOrCreateSigningKey(refresh = false) {
     if (!refresh) {
@@ -780,7 +800,7 @@ export class SessionManager {
    * Async function that wraps a task with a confirmation screen, while
    * also initially opening the confirmation loading screen.
    * @param popupWindowSize
-   * @returns
+   * @returns Promise<T>
    */
   public withConfirmationScreenTask(popupWindowSize?: {
     width: number;
@@ -804,7 +824,6 @@ export class SessionManager {
   /**
    * Log a message if debug is enabled
    * @param message
-   * @returns
    */
   private log(message: string) {
     if (!this.#config.debug) return;
