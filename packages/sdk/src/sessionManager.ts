@@ -249,7 +249,7 @@ export class SessionManager {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Promise<PlayerOperationResponse>
+   * @returns Promise<boolean>
    */
   async revokeSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
@@ -324,7 +324,7 @@ export class SessionManager {
 
     this.clearSession();
 
-    return operation;
+    return true;
   }
 
   /**
