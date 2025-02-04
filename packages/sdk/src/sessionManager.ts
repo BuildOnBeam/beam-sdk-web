@@ -67,10 +67,14 @@ export class SessionManager {
         });
 
         const url = new URL(connection.url);
+
         url.protocol = 'http';
         url.host = 'localhost:3000';
 
-        url.searchParams.append('keepOpen', '1');
+        if (this.#config.autoConfirm) {
+          url.searchParams.append('auto-confirm', '1');
+          // url.searchParams.append('no-close', '1');
+        }
 
         const result = await this.#confirm.requestConnection(url.toString());
 
@@ -304,9 +308,13 @@ export class SessionManager {
         this.log(`Signing operation using browser: ${operation.id}`);
 
         const url = new URL(operation.url);
+
         url.protocol = 'http';
         url.host = 'localhost:3000';
-        url.searchParams.append('autoConfirm', '1');
+
+        if (this.#config.autoConfirm) {
+          url.searchParams.append('auto-confirm', '1');
+        }
 
         const result = await this.#confirm.signOperation(url.toString());
 

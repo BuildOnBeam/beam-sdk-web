@@ -28,6 +28,8 @@ export type ClientConfig = {
   chains: ChainConfig;
   /** Optionally define a chainId to connect to by default. */
   chainId?: ChainId;
+  /** Automates confirmations required by the user. Defaults to false. */
+  autoConfirm?: boolean;
   /** Set to true to output logs */
   debug?: boolean;
 };

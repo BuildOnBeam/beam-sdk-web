@@ -38,6 +38,9 @@ export default class ConfirmationScreen {
   }
 
   requestConnection(url: string): Promise<RequestConnectionResult> {
+    // When autoConfirm is true, the window should not be closed after the task is successfully completed
+    const shouldCloseWindow = !new URLSearchParams(url).has('auto-confirm');
+
     return new Promise((resolve, reject) => {
       const messageHandler = ({ data, origin }: MessageEvent) => {
         if (
@@ -49,7 +52,10 @@ export default class ConfirmationScreen {
 
         switch (data.messageType as ReceiveMessage) {
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_CONFIRMED: {
-            this.closeWindow();
+            if (shouldCloseWindow) {
+              this.closeWindow();
+            }
+
             const { signature, address, ownerAddress } = data.payload;
             resolve({
               signature,
@@ -151,6 +157,10 @@ export default class ConfirmationScreen {
   }
 
   loading(popupOptions?: { width: number; height: number }) {
+    if (this.overlay && this.confirmationWindow) {
+      return;
+    }
+
     this.popupOptions = popupOptions;
 
     const url = `${this.config.getChainConfig().authUrl}/loading`;
@@ -195,8 +205,8 @@ export default class ConfirmationScreen {
   }
 
   closeWindow() {
-    // this.confirmationWindow?.close();
-    // this.confirmationWindow = undefined;
+    this.confirmationWindow?.close();
+    this.confirmationWindow = undefined;
     this.overlay?.remove();
     this.overlay = undefined;
   }

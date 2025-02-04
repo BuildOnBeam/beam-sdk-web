@@ -7,6 +7,7 @@ export class BeamConfiguration {
 
   #chainId?: ChainId;
 
+  readonly autoConfirm?: boolean;
   readonly debug?: boolean;
 
   constructor(config: ClientConfig) {
@@ -15,9 +16,9 @@ export class BeamConfiguration {
     }
 
     this.chains = config.chains;
-
     if (config.chainId) this.setChainId(config.chainId);
 
+    this.autoConfirm = config.autoConfirm || false;
     this.debug = config.debug || false;
   }
 
@@ -91,7 +92,8 @@ export class BeamConfiguration {
           return {
             publishableKey: chain.publishableKey,
             sponsor: chain.sponsor ?? false,
-            authUrl: 'https://identity.preview.onbeam.com',
+            // authUrl: 'https://identity.preview.onbeam.com',
+            authUrl: 'http://localhost:3000',
             apiUrl: 'https://api.preview.onbeam.com',
             rpcUrl: 'https://build.onbeam.com/rpc/testnet',
           };

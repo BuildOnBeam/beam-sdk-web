@@ -13,6 +13,7 @@ const config: ClientConfig = {
     },
   ],
   chainId: ChainId.BEAM_TESTNET,
+  autoConfirm: true,
   debug: true,
 };
 
