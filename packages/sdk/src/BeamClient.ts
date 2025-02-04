@@ -107,7 +107,7 @@ export class BeamClient {
    * @param address
    * @param ownerAddress
    * @param chainId
-   * @returns
+   * @returns Promise<boolean>
    */
   public verifyOwnership(
     address: string,
@@ -122,7 +122,7 @@ export class BeamClient {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
   public async getActiveSession(entityId: string, chainId: number) {
     return this.#sessionManager.getActiveSession(entityId, chainId);
@@ -133,14 +133,25 @@ export class BeamClient {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<boolean>
    */
   public async createSession(entityId: string, chainId: number) {
     return this.#sessionManager.createSession(entityId, chainId);
   }
 
   /**
-   * Clear the current session
+   * Revokes a session. If there is no active session, it will throw an error.
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  public async revokeSession(entityId: string, chainId: number) {
+    return this.#sessionManager.revokeSession(entityId, chainId);
+  }
+
+  /**
+   * Clear the current session from storage. If the session should be revoked, use the revokeSession method instead.
    * @param entityId
    * @param chainId
    */
@@ -149,12 +160,23 @@ export class BeamClient {
   }
 
   /**
+   * Connect a user to the game
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  public async connectUserToGame(entityId: string, chainId: number) {
+    return this.#sessionManager.connectUserToGame(entityId, chainId);
+  }
+
+  /**
    * Sign an operation by its id
    * @param entityId
    * @param operationId
    * @param chainId
    * @throws Error
-   * @returns boolean
+   * @returns Promise<PlayerOperationResponse>
    */
   public async signOperation(
     entityId: string,
