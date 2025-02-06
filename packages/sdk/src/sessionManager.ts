@@ -1,20 +1,21 @@
 import { Hex, hashMessage, serializeSignature, verifyMessage } from 'viem';
 import { generatePrivateKey, privateKeyToAccount, sign } from 'viem/accounts';
-import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import { getConnectionAPI } from './lib/api/beam.connection-api.generated';
+import { CreateTransactionInputInteractionsItem } from './lib/api/beam.connection-api.types.generated';
+import { getPlayerAPI } from './lib/api/beam.player-api.generated';
 import {
+  ConfirmOperationRequestActionsItem,
+  ConfirmOperationRequestStatus,
+  CreateConnectionRequestResponse,
+  GenerateSessionRequestResponse,
   PlayerOperationResponse,
   PlayerOperationResponseStatus,
-  ConfirmOperationRequestStatus,
-  ConfirmOperationRequestActionsItem,
-  GenerateSessionRequestResponse,
 } from './lib/api/beam.player-api.types.generated';
 import { BeamConfiguration } from './lib/config';
 import { ConfirmationScreen } from './lib/confirmation';
 import { StorageKey, StorageKeys, StorageService } from './lib/storage';
 import { Session } from './types';
 import { isSessionOwnedBy, isSessionValid } from './utils';
-import { CreateTransactionInputInteractionsItem } from './lib/api/beam.connection-api.types.generated';
 
 export type SessionManagerInput = {
   config: BeamConfiguration;
@@ -64,6 +65,7 @@ export class SessionManager {
         const connection = await this.#connectionApi.getMessageSignatureUrl({
           chainId,
           message: hashMessage(message) as Hex,
+          authProvider: this.#config.authProvider,
         });
 
         const result = await this.#confirm.requestConnection(connection.url);
@@ -102,7 +104,7 @@ export class SessionManager {
   /**
    * Returns a stored address for a chainId
    * @param chainId
-   * @returns
+   * @returns string | null
    */
   getAddress(chainId: number) {
     const stored = this.#storage.get(StorageKey.ACCOUNT_ADDRESS) ?? {};
@@ -127,7 +129,7 @@ export class SessionManager {
    * @param address
    * @param ownerAddress
    * @param chainId
-   * @returns
+   * @returns Promise<boolean>
    */
   async verifyOwnership(
     address: string,
@@ -146,7 +148,7 @@ export class SessionManager {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
   async getActiveSession(entityId: string, chainId: number) {
     const { session } = await this.getActiveSessionAndKeys(entityId, chainId);
@@ -169,7 +171,7 @@ export class SessionManager {
    * @param entityId
    * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
   async createSession(entityId: string, chainId: number) {
     let { session, key } = await this.getActiveSessionAndKeys(
@@ -195,6 +197,7 @@ export class SessionManager {
       sessionRequest = await this.api.createSessionRequest(entityId, {
         chainId,
         address: account.address,
+        authProvider: this.#config.authProvider,
       });
     } catch (error: unknown) {
       this.log(
@@ -242,6 +245,89 @@ export class SessionManager {
   }
 
   /**
+   * Revoke the current session
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  async revokeSession(entityId: string, chainId: number) {
+    let { session, key } = await this.getActiveSessionAndKeys(
+      entityId,
+      chainId,
+    );
+
+    if (!session) {
+      this.log('No active session found, ending early');
+
+      throw new Error('No active session found to revoke');
+    }
+
+    this.log('Revoking session');
+
+    key = this.getOrCreateSigningKey(true);
+
+    let operation: PlayerOperationResponse | null = null;
+    let error: string | null = null;
+
+    try {
+      const account = privateKeyToAccount(key);
+
+      const result = await this.api.revokeSession(entityId, {
+        chainId,
+        address: account.address,
+        authProvider: this.#config.authProvider,
+      });
+
+      if (result) operation = result;
+    } catch (error: unknown) {
+      this.log(
+        `Failed to  revoke session: ${
+          error instanceof Error ? error.message : 'Unknown error.'
+        }`,
+      );
+    }
+
+    if (!operation) {
+      this.log('Failed to get operation to revoke session');
+
+      throw new Error('Failed to get operation to revoke session');
+    }
+
+    try {
+      this.log(`Signing operation using browser: ${operation.id}`);
+
+      const result = await this.#confirm.signOperation(operation.url);
+
+      this.log(`Operation signed: ${result.confirmed}`);
+
+      if (!result.confirmed) {
+        throw new Error('Unable to sign operation');
+      }
+    } catch (err: unknown) {
+      this.log(
+        `Failed to sign operation: ${
+          err instanceof Error ? err.message : 'Unknown error.'
+        }`,
+      );
+
+      error = err instanceof Error ? err.message : 'Unknown error.';
+    }
+
+    if (error) throw new Error(error);
+
+    operation = await this.api.getOperation(operation.id);
+
+    if (operation.status !== PlayerOperationResponseStatus.Executed) {
+      throw new Error(`Operation failed with status: ${operation.status}`);
+    }
+
+    this.clearSession();
+
+    return true;
+  }
+
+  /**
    * Clear the current session
    * @param entityId
    * @param chainId
@@ -251,11 +337,67 @@ export class SessionManager {
   }
 
   /**
+   * Connect a user to the game by creating and monitoring a connection request
+   * @param entityId
+   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  async connectUserToGame(entityId: string, chainId: number) {
+    this.log('Connecting user to game');
+
+    let connectionRequest: CreateConnectionRequestResponse | null = null;
+
+    try {
+      const result = await this.api.createConnectionRequest({
+        entityId,
+        chainId,
+        authProvider: this.#config.authProvider,
+      });
+
+      connectionRequest = result;
+    } catch (error) {
+      this.log(
+        `Failed to create connection request: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      );
+      throw error;
+    }
+
+    this.log(`Opening connection request URL: ${connectionRequest.url}`);
+
+    return this.withConfirmationScreen()(async () => {
+      try {
+        const result = await this.#confirm.requestConnection(
+          connectionRequest.url,
+        );
+
+        if (!result) {
+          throw new Error('Connection request failed');
+        }
+
+        this.log('Connection request successful');
+
+        return true;
+      } catch (error) {
+        this.log(
+          `Failed to complete connection request: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+        );
+        throw error;
+      }
+    });
+  }
+
+  /**
    * Sign a message or typed data
    * @param chainId
    * @param accountAddress account abstraction getAddress
    * @param data message or typed data
-   * @returns string (signature)
+   * @throws Error
+   * @returns Promise<string> (signature)
    */
   async signMessageOrData(chainId: number, accountAddress: string, data: any) {
     let operation: PlayerOperationResponse | null = null;
@@ -277,6 +419,7 @@ export class SessionManager {
               },
             },
           ],
+          authProvider: this.#config.authProvider,
         });
 
         if (result) operation = result;
@@ -337,7 +480,8 @@ export class SessionManager {
    * @param accountAddress
    * @param chainId
    * @param interaction
-   * @returns
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
    */
   async sendTransaction(
     accountAddress: string,
@@ -357,6 +501,7 @@ export class SessionManager {
           chainId,
           sponsor,
           interactions: [interaction],
+          authProvider: this.#config.authProvider,
         });
 
         if (result) operation = result;
@@ -405,8 +550,9 @@ export class SessionManager {
    * @param entityId
    * @param operationId
    * @param chainId
+   * @param useBrowserFallback
    * @throws Error
-   * @returns boolean
+   * @returns Promise<PlayerOperationResponse>
    */
   async signOperation(
     entityId: string,
@@ -454,6 +600,13 @@ export class SessionManager {
     );
   }
 
+  /**
+   * Sign an operation using a session
+   * @param operation
+   * @param privateKey
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
+   */
   private async signOperationUsingSession(
     operation: PlayerOperationResponse,
     privateKey: Hex,
@@ -524,6 +677,12 @@ export class SessionManager {
     return this.api.getOperation(operation.id);
   }
 
+  /**
+   * Sign an operation using the browser
+   * @param operation
+   * @throws Error
+   * @returns Promise<PlayerOperationResponse>
+   */
   private async signOperationUsingBrowser(operation: PlayerOperationResponse) {
     let error: string | null = null;
 
@@ -560,7 +719,8 @@ export class SessionManager {
    * Get active session and keys. If a session is not valid, it will try to get a new one. If that fails, only a key will be returned.
    * @param entityId
    * @param chainId
-   * @returns
+   * @throws Error
+   * @returns Promise<{ session: Session | null, key: Hex }>
    */
   private async getActiveSessionAndKeys(entityId: string, chainId: number) {
     let session: Session | null = null;
@@ -609,7 +769,8 @@ export class SessionManager {
   /**
    * Get or create a signing key
    * @param refresh
-   * @returns
+   * @throws Error
+   * @returns Hex
    */
   private getOrCreateSigningKey(refresh = false) {
     if (!refresh) {
@@ -639,7 +800,7 @@ export class SessionManager {
    * Async function that wraps a task with a confirmation screen, while
    * also initially opening the confirmation loading screen.
    * @param popupWindowSize
-   * @returns
+   * @returns Promise<T>
    */
   public withConfirmationScreenTask(popupWindowSize?: {
     width: number;
@@ -663,7 +824,6 @@ export class SessionManager {
   /**
    * Log a message if debug is enabled
    * @param message
-   * @returns
    */
   private log(message: string) {
     if (!this.#config.debug) return;
