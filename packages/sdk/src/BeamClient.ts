@@ -8,6 +8,7 @@ import {
 } from './lib/provider';
 import { WindowProvider } from './lib/provider/types';
 import { StorageKeys, StorageService } from './lib/storage';
+import { assert } from './lib/utils/assert';
 import { SessionManager } from './sessionManager';
 import { ChainId, ClientConfig } from './types';
 
@@ -67,7 +68,6 @@ export class BeamClient {
    */
   public switchChain(chainId: ChainId) {
     if (this.#config.chainId === chainId) return;
-
     this.#config.setChainId(chainId);
   }
 
@@ -106,46 +106,72 @@ export class BeamClient {
    * Verifies the ownership of an address
    * @param address
    * @param ownerAddress
-   * @param chainId
-   * @returns
+   * @returns Promise<boolean>
    */
-  public verifyOwnership(
-    address: string,
-    ownerAddress: string,
-    chainId: number,
-  ) {
+  public verifyOwnership(address: string, ownerAddress: string) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
     return this.#sessionManager.verifyOwnership(address, ownerAddress, chainId);
   }
 
   /**
    * Get the active session. If there is no active session, it will throw an error.
    * @param entityId
-   * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<Session>
    */
-  public async getActiveSession(entityId: string, chainId: number) {
+  public async getActiveSession(entityId: string) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
     return this.#sessionManager.getActiveSession(entityId, chainId);
   }
 
   /**
    * Create a new session. If there is an active session, it will throw an error.
    * @param entityId
-   * @param chainId
    * @throws Error
-   * @returns Session
+   * @returns Promise<boolean>
    */
-  public async createSession(entityId: string, chainId: number) {
+  public async createSession(entityId: string) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
     return this.#sessionManager.createSession(entityId, chainId);
   }
 
   /**
-   * Clear the current session
+   * Revokes a session. If there is no active session, it will throw an error.
    * @param entityId
-   * @param chainId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  public async revokeSession(entityId: string) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
+    return this.#sessionManager.revokeSession(entityId, chainId);
+  }
+
+  /**
+   * Clear the current session from storage. If the session should be revoked, use the revokeSession method instead.
    */
   public async clearSession() {
     this.#sessionManager.clearSession();
+  }
+
+  /**
+   * Connect a user to the game
+   * @param entityId
+   * @throws Error
+   * @returns Promise<boolean>
+   */
+  public async connectUserToGame(entityId: string) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
+    return this.#sessionManager.connectUserToGame(entityId, chainId);
   }
 
   /**
@@ -154,14 +180,16 @@ export class BeamClient {
    * @param operationId
    * @param chainId
    * @throws Error
-   * @returns boolean
+   * @returns Promise<PlayerOperationResponse>
    */
   public async signOperation(
     entityId: string,
     operationId: string,
-    chainId: number,
     useBrowserFallback = false,
   ) {
+    const chainId = this.#config.chainId;
+    assert(chainId, 'Chain ID is not set');
+
     return this.#sessionManager.signOperation(
       entityId,
       operationId,

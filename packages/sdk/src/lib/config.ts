@@ -1,12 +1,12 @@
-import { ClientConfig } from '../types';
+import { AuthProvider, ClientConfig } from '../types';
 import { ChainId } from '../types';
 import { AXIOS_INSTANCE } from '../lib/api/beam-axios-client';
 
 export class BeamConfiguration {
   readonly chains: ClientConfig['chains'];
-
   #chainId?: ChainId;
 
+  readonly authProvider?: AuthProvider;
   readonly debug?: boolean;
 
   constructor(config: ClientConfig) {
@@ -18,6 +18,7 @@ export class BeamConfiguration {
 
     if (config.chainId) this.setChainId(config.chainId);
 
+    this.authProvider = config.authProvider;
     this.debug = config.debug || false;
   }
 

@@ -1,3 +1,5 @@
+import { GenerateSessionUrlRequestInputAuthProvider } from './lib/api/beam.player-api.types.generated';
+
 export enum ChainId {
   BEAM_MAINNET = 4337,
   BEAM_TESTNET = 13337,
@@ -11,6 +13,8 @@ export enum ChainName {
   SOPHON_MAINNET = 'Sophon',
   SOPHON_TESTNET = 'Sophon Testnet',
 }
+
+export type AuthProvider = GenerateSessionUrlRequestInputAuthProvider;
 
 export type ChainConfig = {
   /** The chain id */
@@ -30,6 +34,8 @@ export type ClientConfig = {
   chainId?: ChainId;
   /** Set to true to output logs */
   debug?: boolean;
+  /** The auth provider to use for authentication, if not provided the user will be prompted to select one */
+  authProvider?: AuthProvider;
 };
 
 export type Session = {
