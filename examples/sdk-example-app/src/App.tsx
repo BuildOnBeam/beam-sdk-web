@@ -11,7 +11,7 @@ import './styles.css';
 import beamLogo from '/beam-logo.png';
 
 const entityId = import.meta.env.VITE_BEAM_ENTITY_ID;
-const chainId = 13337; // Beam Testnet
+const chainId = ChainId.BEAM_TESTNET;
 
 const config: ClientConfig = {
   chains: [
@@ -21,6 +21,7 @@ const config: ClientConfig = {
       isPreview: true,
     },
   ],
+  chainId,
   debug: true,
 };
 
@@ -51,10 +52,7 @@ const App = () => {
           setUser(user);
         }
 
-        const session_ = await client.current.getActiveSession(
-          entityId,
-          chainId,
-        );
+        const session_ = await client.current.getActiveSession(entityId);
 
         if (session_) {
           setSession(session_);
@@ -75,7 +73,7 @@ const App = () => {
     setLoading('Creating session...');
 
     try {
-      const session_ = await client.current.createSession(entityId, chainId);
+      const session_ = await client.current.createSession(entityId);
 
       if (session_) {
         setSession(session_);
@@ -174,11 +172,7 @@ const App = () => {
         throw new Error('Failed to create user transaction.');
       }
 
-      const signed = await client.current.signOperation(
-        entityId,
-        operation.id,
-        chainId,
-      );
+      const signed = await client.current.signOperation(entityId, operation.id);
 
       if (signed) {
         fetchAssetsWithListings();
@@ -220,7 +214,6 @@ const App = () => {
         const signed = await client.current.signOperation(
           entityId,
           operation.id,
-          chainId,
         );
 
         if (signed) {
@@ -262,7 +255,6 @@ const App = () => {
         const signed = await client.current.signOperation(
           entityId,
           operation.id,
-          chainId,
         );
 
         if (signed) {
