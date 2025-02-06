@@ -14,7 +14,6 @@ const entityId = import.meta.env.VITE_BEAM_ENTITY_ID;
 const chainId = ChainId.BEAM_TESTNET;
 
 const config: ClientConfig = {
-  chainId,
   chains: [
     {
       id: ChainId.BEAM_TESTNET,
