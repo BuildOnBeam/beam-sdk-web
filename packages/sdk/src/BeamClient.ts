@@ -103,6 +103,19 @@ export class BeamClient {
   }
 
   /**
+   * Opens the confirmation popup loading screen. Useful if your app performs async requests between clicking a button
+   * and interacting with the Beam SDK, which can cause browsers like Safari to block the popup. Any further SDK interactions
+   * that need the popup will use the same popup window.
+   * @param popupWindowSize
+   */
+  public openPopup(popupWindowSize?: {
+    width: number;
+    height: number;
+  }) {
+    this.#sessionManager.openPopup(popupWindowSize);
+  }
+
+  /**
    * Verifies the ownership of an address
    * @param address
    * @param ownerAddress

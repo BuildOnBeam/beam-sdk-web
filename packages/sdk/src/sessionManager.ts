@@ -822,6 +822,17 @@ export class SessionManager {
   }
 
   /**
+   * Opens the confirmation loading screen
+   * @param popupWindowSize
+   */
+  public openPopup(popupWindowSize?: {
+    width: number;
+    height: number;
+  }) {
+    this.#confirm.loading(popupWindowSize);
+  }
+
+  /**
    * Log a message if debug is enabled
    * @param message
    */

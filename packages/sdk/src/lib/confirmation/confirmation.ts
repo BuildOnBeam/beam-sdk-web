@@ -151,6 +151,11 @@ export default class ConfirmationScreen {
   }
 
   loading(popupOptions?: { width: number; height: number }) {
+    // Do not recreate the popup if it already exists
+    if (this.overlay && this.confirmationWindow) {
+      return;
+    }
+
     this.popupOptions = popupOptions;
 
     const url = `${this.config.getChainConfig().authUrl}/loading`;
@@ -196,6 +201,7 @@ export default class ConfirmationScreen {
 
   closeWindow() {
     this.confirmationWindow?.close();
+    this.confirmationWindow = undefined;
     this.overlay?.remove();
     this.overlay = undefined;
   }
