@@ -116,6 +116,14 @@ export class BeamClient {
   }
 
   /**
+   * Closes the confirmation popup loading screen. Note that calling this programatically can disrupt any pending
+   * SDK interactions, use only if you are sure it won't disrupt the user experience.
+   */
+  public closePopup() {
+    this.#sessionManager.closePopup();
+  }
+
+  /**
    * Verifies the ownership of an address
    * @param address
    * @param ownerAddress
@@ -204,8 +212,8 @@ export class BeamClient {
     assert(chainId, 'Chain ID is not set');
 
     return this.#sessionManager.signOperation(
-      entityId,
       operationId,
+      entityId,
       chainId,
       useBrowserFallback,
     );

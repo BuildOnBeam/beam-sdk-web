@@ -833,6 +833,13 @@ export class SessionManager {
   }
 
   /**
+   * Closes the confirmation loading screen
+   */
+  public closePopup() {
+    this.#confirm.closeWindow();
+  }
+
+  /**
    * Log a message if debug is enabled
    * @param message
    */
