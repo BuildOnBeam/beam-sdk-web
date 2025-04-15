@@ -343,7 +343,7 @@ export class SessionManager {
    * @throws Error
    * @returns Promise<boolean>
    */
-  async connectUserToGame(entityId: string, chainId: number) {
+  async connectUserToGame(entityId: string) {
     this.log('Connecting user to game');
 
     let connectionRequest: CreateConnectionRequestResponse | null = null;
@@ -351,7 +351,6 @@ export class SessionManager {
     try {
       const result = await this.api.createConnectionRequest({
         entityId,
-        chainId,
         authProvider: this.#config.authProvider,
       });
 

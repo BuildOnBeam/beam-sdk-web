@@ -192,7 +192,7 @@ export class BeamClient {
     const chainId = this.#config.chainId;
     assert(chainId, 'Chain ID is not set');
 
-    return this.#sessionManager.connectUserToGame(entityId, chainId);
+    return this.#sessionManager.connectUserToGame(entityId);
   }
 
   /**
