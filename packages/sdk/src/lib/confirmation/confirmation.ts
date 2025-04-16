@@ -238,9 +238,9 @@ export default class ConfirmationScreen {
       CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION,
     );
 
-    this.overlay.update(() =>
-      this.recreateConfirmationWindow(href, timerCallback),
-    );
+    this.overlay.update(() => {
+      return this.recreateConfirmationWindow(href, timerCallback);
+    });
   }
 
   private recreateConfirmationWindow(href: string, timerCallback: () => void) {

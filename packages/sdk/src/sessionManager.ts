@@ -186,14 +186,12 @@ export class SessionManager {
     }
 
     this.log('Creating a new session');
-
     key = this.getOrCreateSigningKey(true);
+    const account = privateKeyToAccount(key);
 
     let sessionRequest: GenerateSessionRequestResponse | null = null;
 
     try {
-      const account = privateKeyToAccount(key);
-
       sessionRequest = await this.api.createSessionRequest(entityId, {
         chainId,
         address: account.address,
@@ -209,39 +207,33 @@ export class SessionManager {
 
     if (!sessionRequest) {
       this.log('Failed to create session request');
-
       throw new Error('Failed to create session request');
     }
 
     this.log(`Created session request: ${sessionRequest.id}`);
 
-    let error: string | null = null;
+    this.log(`Opening session request URL: ${sessionRequest.url}`);
 
-    try {
-      this.log(`Confirming session request: ${sessionRequest.id}`);
+    return this.withConfirmationScreen()(async () => {
+      try {
+        const result = await this.#confirm.requestSession(sessionRequest.url);
 
-      // TODO add timeout
+        this.log(`Session request confirmed: ${result.confirmed}`);
 
-      const result = await this.#confirm.requestSession(sessionRequest.url);
-
-      this.log(`Session request confirmed: ${result.confirmed}`);
-
-      if (!result.confirmed) {
-        throw new Error('Unable to confirm session request');
+        if (!result.confirmed) {
+          throw new Error('Unable to confirm session request');
+        }
+      } catch (error) {
+        this.log(
+          `Failed to complete session request: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+        );
+        throw error;
       }
-    } catch (err: unknown) {
-      this.log(
-        `Failed to confirm session request: ${
-          err instanceof Error ? err.message : 'Unknown error.'
-        }`,
-      );
 
-      error = err instanceof Error ? err.message : 'Unknown error.';
-    }
-
-    if (error) throw new Error(error);
-
-    return this.getActiveSession(entityId, chainId);
+      return this.getActiveSession(entityId, chainId);
+    });
   }
 
   /**
