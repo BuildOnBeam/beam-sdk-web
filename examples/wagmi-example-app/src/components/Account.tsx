@@ -3,6 +3,7 @@ import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from 'wagmi';
 import { beamClient } from '../main';
 // import MintERC20 from './Actions/MintERC20';
 import SetApprovalForAll from './Actions/SetApprovalForAll';
+import MintERC20 from './Actions/MintERC20';
 
 export function Account() {
   const { address, connector } = useAccount();
@@ -48,8 +49,10 @@ export function Account() {
         {disconnectTxt}
       </button>
 
-      {/* <MintERC20 /> */}
-      <SetApprovalForAll />
+      <div className="stack">
+        <MintERC20 />
+        <SetApprovalForAll />
+      </div>
     </div>
   );
 }

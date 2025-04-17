@@ -17,7 +17,7 @@ The Beam Web SDK is a Typescript library that allows you to easily integrate Bea
 
 # Getting Started
 
-Before you start, make sure you obtain an API key by requesting it through [build@onbeam](mailto:build@onbeam). More information can be found on the [Beam API Docs](https://docs.onbeam.com/service).
+Before you start, make sure you obtain an API key by requesting it through [build@onbeam](mailto:build@onbeam). More information can be found on the [Beam API Docs](https://docs.onbeam.com/sdk).
 
 ## Installation
 

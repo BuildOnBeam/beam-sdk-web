@@ -1,66 +1,52 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Hex, encodeFunctionData, parseAbi } from 'viem';
-import { useAccount } from 'wagmi';
+import { useAccount, useWalletClient } from 'wagmi';
 
 const contractAddress = '0x8913d575CdFe16dC958c72009BF63e39CCAE795F';
 
 function SetApprovalForAll() {
-  const { connector } = useAccount();
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [fromAddress, setFromAddress] = useState<Hex | null>(null);
 
   useEffect(() => {
-    const getAddress = async () => {
-      const provider = await connector?.getProvider();
+    if (address) {
+      setFromAddress(address);
+    }
+  }, [address]);
 
-      if (provider) {
-        const [walletAddress] = await provider.request({
-          method: 'eth_requestAccounts',
-        });
-        setFromAddress(walletAddress || '');
-      }
-    };
+  const handleSubmit = useCallback(async () => {
+    if (!walletClient || !fromAddress) return;
 
-    getAddress().catch(console.log);
-  }, [connector]);
+    const abi = parseAbi([
+      'function setApprovalForAll(address to, bool approved)',
+    ]);
 
-  const handleSubmit = useCallback(() => {
-    const approve = async () => {
-      const provider = await connector?.getProvider();
+    const data = encodeFunctionData({
+      abi,
+      functionName: 'setApprovalForAll',
+      args: [fromAddress, true],
+    });
 
-      if (provider && fromAddress) {
-        const abi = parseAbi([
-          'function setApprovalForAll(address to, bool approved)',
-        ]);
+    const value = '0xde0b6b3a7640000'; // 1 ETH in hex
 
-        const data = encodeFunctionData({
-          abi,
-          functionName: 'setApprovalForAll',
-          args: [fromAddress, true],
-        });
-
-        const value = '1000000000000000000';
-
-        await provider.request({
-          method: 'eth_sendTransaction',
-          params: [
-            {
-              from: fromAddress,
-              to: contractAddress,
-              value,
-              data,
-            },
-          ],
-        });
-      }
-    };
-
-    approve().catch(console.log);
-  }, [connector, fromAddress]);
+    await walletClient.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          from: fromAddress,
+          to: contractAddress,
+          value,
+          data,
+        },
+      ],
+    });
+  }, [walletClient, fromAddress]);
 
   return (
     <div>
-      <button type="button" onClick={() => handleSubmit()}>
-        Aprove for {fromAddress}
+      <button type="button" onClick={handleSubmit}>
+        Approve for {fromAddress}
       </button>
     </div>
   );
