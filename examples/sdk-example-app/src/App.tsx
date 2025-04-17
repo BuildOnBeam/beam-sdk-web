@@ -18,7 +18,6 @@ const config: ClientConfig = {
     {
       id: ChainId.BEAM_TESTNET,
       publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
-      isPreview: true,
     },
   ],
   chainId,

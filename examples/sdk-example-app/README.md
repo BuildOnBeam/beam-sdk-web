@@ -1,11 +1,13 @@
-# Beam SDK Wagmi Example App
+# Beam SDK Example App
 
-This example demonstrates how to integrate the Beam Web SDK into your web application using Wagmi, allowing you to connect your Beam wallet and interact with the Beam chain.
+This example demonstrates how to integrate the Beam Web SDK into your application to manage player sessions and interact with the Beam chain.
 
 ## Features
 
-- Connect with your Beam wallet
-- Set approvalForAll for a contract
+- Creating sessions
+- Minting NFTs
+- Listing NFTs
+- Cancelling listings
 
 ## Getting Started
 
@@ -34,12 +36,13 @@ pnpm sdk prepublish
 
 4. Navigate to the example app directory:
 ```bash
-cd beam-sdk-web/examples/wagmi-example-app
+cd beam-sdk-web/examples/sdk-example-app
 ```
 
-5. Copy the `.env.example` file to `.env.local` and add your Beam API key.
+5. Copy the `.env.example` file to `.env.local` and add your Beam API key. For the entity id, you can use any random string.
 ```env
 VITE_BEAM_PUBLISHABLE_KEY=your-beam-testnet-publishable-key
+VITE_BEAM_ENTITY_ID=some-random-entity-id
 ```
 
 6. Start the development server:
@@ -51,7 +54,6 @@ pnpm dev
 
 - `pnpm dev` - Start the development server
 - `pnpm build` - Build the example app
-- `pnpm lint` - Lint the example app
 - `pnpm preview` - Preview the production build
 
 ## Learn More
