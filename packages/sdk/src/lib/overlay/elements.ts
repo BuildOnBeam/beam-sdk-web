@@ -39,7 +39,7 @@ const TRY_AGAIN_BUTTON = `
 `;
 
 const getOverlay = (contents: string): string => `
-  <div class="overlay" data-beam-overlay>
+  <div class="overlay">
     ${CLOSE_BUTTON}
     <div class="content">
       ${BEAM_LOGO_SVG}
