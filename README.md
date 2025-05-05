@@ -47,7 +47,7 @@ const config: ClientConfig = {
   chains: [
     {
       id: ChainId.BEAM_TESTNET,
-      publishableKey: 'your-beam-testnet-publishable-key'
+      publishableKey: 'your-beam-api-key'
     }
   ],
   debug: true, // Logs debug information to the console
@@ -56,7 +56,7 @@ const config: ClientConfig = {
 const client = new BeamClient(config);
 ```
 
-Make sure your API key matches the environment you are working on. For example, if you are working on a development environment, use the development API key.
+Make sure your API key matches the environment you are working on.
 
 ## Authenticating a user
 

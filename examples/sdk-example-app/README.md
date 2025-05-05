@@ -15,7 +15,7 @@ This example demonstrates how to integrate the Beam Web SDK into your applicatio
 
 - Node.js 20.x or later
 - pnpm (but you can use npm or yarn as well)
-- A Beam API key for Testnet (request one at [build@onbeam](mailto:build@onbeam)). 
+- A Beam API key (request one at [build@onbeam](mailto:build@onbeam)). 
 
 ### Installation
 
