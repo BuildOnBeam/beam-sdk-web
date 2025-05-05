@@ -13,5 +13,5 @@ concurrency:
 
 jobs:
   sonarqube:
-    uses: BuildOnBeam/shared-gh-actions/sonarqube/action.yml@main
+    uses: BuildOnBeam/shared-gh-actions/sonarqube@main
     secrets: inherit
