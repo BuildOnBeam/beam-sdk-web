@@ -12,6 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sonarqube:
-    uses: BuildOnBeam/shared-gh-actions/sonarqube@main
-    secrets: inherit
+  validate-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: BuildOnBeam/shared-gh-actions/sonarqube@main
+        with:
+          should-validate-quality: true
+          sonar-host-url: ${{ vars.SONAR_HOST_URL }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
