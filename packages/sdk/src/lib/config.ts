@@ -56,7 +56,8 @@ export class BeamConfiguration {
           sponsor: chain.sponsor ?? false,
           authUrl: 'https://identity.onbeam.com',
           apiUrl: 'https://api.onbeam.com',
-          rpcUrl: 'https://rpc.sophon.xyz',
+          rpcUrl:
+            'https://magical-late-asphalt.sophon-mainnet.quiknode.pro/aab96e439baab0862cc19d871e6b2d142eb7422f',
         };
 
       case ChainId.SOPHON_TESTNET:
@@ -66,7 +67,8 @@ export class BeamConfiguration {
             sponsor: chain.sponsor ?? false,
             authUrl: 'https://identity.preview.onbeam.com',
             apiUrl: 'https://api.preview.onbeam.com',
-            rpcUrl: 'https://rpc.testnet.sophon.xyz',
+            rpcUrl:
+              'https://radial-frosty-silence.sophon-testnet.quiknode.pro/19e8b50c9a4c31d4b36d3e443eca64d28b634c4f',
           };
         }
 
@@ -75,7 +77,8 @@ export class BeamConfiguration {
           sponsor: chain.sponsor ?? false,
           authUrl: 'https://identity.beta.onbeam.com',
           apiUrl: 'https://api.beta.onbeam.com',
-          rpcUrl: 'https://rpc.testnet.sophon.xyz',
+          rpcUrl:
+            'https://radial-frosty-silence.sophon-testnet.quiknode.pro/19e8b50c9a4c31d4b36d3e443eca64d28b634c4f',
         };
 
       case ChainId.BEAM_MAINNET:
