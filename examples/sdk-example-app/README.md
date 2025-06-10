@@ -29,23 +29,28 @@ git clone https://github.com/BuildOnBeam/beam-sdk-web
 pnpm install
 ```
 
-3. Build the SDK:
+3. Generate the API client:
+```bash
+pnpm sdk generate
+```
+
+4. Build the SDK:
 ```bash
 pnpm sdk prepublish
 ```
 
-4. Navigate to the example app directory:
+5. Navigate to the example app directory:
 ```bash
 cd beam-sdk-web/examples/sdk-example-app
 ```
 
-5. Copy the `.env.example` file to `.env.local` and add your Beam API key. For the entity id, you can use any random string.
+6. Copy the `.env.example` file to `.env.local` and add your Beam API key. For the entity id, you can use any random string.
 ```env
 VITE_BEAM_PUBLISHABLE_KEY=your-beam-testnet-publishable-key
 VITE_BEAM_ENTITY_ID=some-random-entity-id
 ```
 
-6. Start the development server:
+7. Start the development server:
 ```bash
 pnpm dev
 ```
