@@ -335,14 +335,14 @@ export class SessionManager {
    * @throws Error
    * @returns Promise<boolean>
    */
-  async connectUserToGame(entityId: string) {
+  async connectUserToGame(entityId?: string) {
     this.log('Connecting user to game');
 
     let connectionRequest: CreateConnectionRequestResponse | null = null;
 
     try {
       const result = await this.api.createConnectionRequest({
-        entityId,
+        entityId: entityId,
         authProvider: this.#config.authProvider,
       });
 
@@ -370,7 +370,7 @@ export class SessionManager {
 
         this.log('Connection request successful');
 
-        return true;
+        return { address: result.address };
       } catch (error) {
         this.log(
           `Failed to complete connection request: ${
