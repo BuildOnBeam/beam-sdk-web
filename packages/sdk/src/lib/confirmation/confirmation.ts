@@ -6,6 +6,7 @@ import {
   ConfirmationResult,
   ReceiveMessage,
   RequestConnectionResult,
+  RequestSignatureResult,
 } from './types';
 
 const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
@@ -37,7 +38,9 @@ export default class ConfirmationScreen {
     this.overlayClosed = false;
   }
 
-  requestConnection(url: string): Promise<RequestConnectionResult> {
+  requestConnection(
+    url: string,
+  ): Promise<RequestSignatureResult | RequestConnectionResult> {
     return new Promise((resolve, reject) => {
       const messageHandler = ({ data, origin }: MessageEvent) => {
         if (
@@ -48,14 +51,16 @@ export default class ConfirmationScreen {
         }
 
         switch (data.messageType as ReceiveMessage) {
+          case ReceiveMessage.REQUEST_CONNECTION_CONFIRMED: {
+            this.closeWindow();
+            const { address } = data.payload;
+            resolve({ address });
+            break;
+          }
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_CONFIRMED: {
             this.closeWindow();
             const { signature, address, ownerAddress } = data.payload;
-            resolve({
-              signature,
-              address,
-              ownerAddress,
-            });
+            resolve({ signature, address, ownerAddress });
             break;
           }
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_ERROR: {
