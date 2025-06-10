@@ -188,7 +188,7 @@ export class BeamClient {
    * @throws Error
    * @returns Promise<boolean>
    */
-  public async connectUserToGame(entityId: string) {
+  public async connectUserToGame(entityId?: string) {
     const chainId = this.#config.chainId;
     assert(chainId, 'Chain ID is not set');
 
