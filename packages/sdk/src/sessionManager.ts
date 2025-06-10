@@ -70,6 +70,10 @@ export class SessionManager {
 
         const result = await this.#confirm.requestConnection(connection.url);
 
+        if (!('signature' in result)) {
+          throw new Error('Failed to retrieve signature');
+        }
+
         const verified = await verifyMessage({
           message,
           signature: result.signature as Hex,
