@@ -1,57 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
-import { encodeFunctionData, parseAbi } from 'viem';
-import { useAccount } from 'wagmi';
+import { Hex, encodeFunctionData, parseAbi } from 'viem';
+import { useAccount, useWalletClient } from 'wagmi';
 
 function MintERC20() {
-  const { connector } = useAccount();
-  const [toAddress, setToAddress] = useState<string | null>(null);
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const [toAddress, setToAddress] = useState<Hex | null>(null);
 
   useEffect(() => {
-    const getAddress = async () => {
-      const provider = await connector?.getProvider();
+    if (address) {
+      setToAddress(address);
+    }
+  }, [address]);
 
-      if (provider) {
-        const [walletAddress] = await provider.request({
-          method: 'eth_requestAccounts',
-        });
-        setToAddress(walletAddress || '');
-      }
-    };
+  const handleSubmit = useCallback(async () => {
+    if (!walletClient || !toAddress) return;
 
-    getAddress().catch(console.log);
-  }, [connector]);
+    const abi = parseAbi([
+      'function safeMint(address to, uint256 tokenId) payable',
+    ]);
 
-  const handleSubmit = useCallback(() => {
-    const mint = async () => {
-      const provider = await connector?.getProvider();
+    const data = encodeFunctionData({
+      abi,
+      functionName: 'safeMint',
+      args: [toAddress, BigInt(1)],
+    });
 
-      if (provider) {
-        const abi = parseAbi([
-          'function safeMint(address to, uint256 tokenId) payable',
-        ]);
-
-        const _data = encodeFunctionData({
-          abi,
-          functionName: 'safeMint',
-          args: [
-            toAddress,
-            'bafybeiend3mtarqmkgfa4uqqkb2ucv7dnshbhdzbwr6tcosbtsxkdlpq6q/0.json',
-          ],
-        });
-
-        provider.request({
-          method: 'eth_sendTransaction',
-          params: [toAddress],
-        });
-      }
-    };
-
-    mint().catch(console.log);
-  }, [connector, toAddress]);
+    await walletClient.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          from: toAddress,
+          to: toAddress,
+          data,
+        },
+      ],
+    });
+  }, [walletClient, toAddress]);
 
   return (
     <div>
-      <button type="button" onClick={() => handleSubmit()}>
+      <button type="button" onClick={handleSubmit}>
         Mint to {toAddress}
       </button>
     </div>

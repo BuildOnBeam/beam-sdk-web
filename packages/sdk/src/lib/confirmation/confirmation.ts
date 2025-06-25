@@ -6,6 +6,7 @@ import {
   ConfirmationResult,
   ReceiveMessage,
   RequestConnectionResult,
+  RequestSignatureResult,
 } from './types';
 
 const CONFIRMATION_WINDOW_TITLE = 'Confirm this transaction';
@@ -37,7 +38,9 @@ export default class ConfirmationScreen {
     this.overlayClosed = false;
   }
 
-  requestConnection(url: string): Promise<RequestConnectionResult> {
+  requestConnection(
+    url: string,
+  ): Promise<RequestSignatureResult | RequestConnectionResult> {
     // When autoConfirm is true, the window should not be closed after the task is successfully completed
     const shouldCloseWindow = !new URLSearchParams(url).has('auto-confirm');
 
@@ -51,17 +54,19 @@ export default class ConfirmationScreen {
         }
 
         switch (data.messageType as ReceiveMessage) {
+          case ReceiveMessage.REQUEST_CONNECTION_CONFIRMED: {
+            this.closeWindow();
+            const { address } = data.payload;
+            resolve({ address });
+            break;
+          }
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_CONFIRMED: {
             if (shouldCloseWindow) {
               this.closeWindow();
             }
 
             const { signature, address, ownerAddress } = data.payload;
-            resolve({
-              signature,
-              address,
-              ownerAddress,
-            });
+            resolve({ signature, address, ownerAddress });
             break;
           }
           case ReceiveMessage.REQUEST_MESSAGE_SIGNATURE_ERROR: {
@@ -157,6 +162,7 @@ export default class ConfirmationScreen {
   }
 
   loading(popupOptions?: { width: number; height: number }) {
+    // Do not recreate the popup if it already exists
     if (this.overlay && this.confirmationWindow) {
       return;
     }
@@ -243,9 +249,9 @@ export default class ConfirmationScreen {
       CONFIRMATION_WINDOW_CLOSED_POLLING_DURATION,
     );
 
-    this.overlay.update(() =>
-      this.recreateConfirmationWindow(href, timerCallback),
-    );
+    this.overlay.update(() => {
+      return this.recreateConfirmationWindow(href, timerCallback);
+    });
   }
 
   private recreateConfirmationWindow(href: string, timerCallback: () => void) {

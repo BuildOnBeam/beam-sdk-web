@@ -5,6 +5,8 @@ export const BEAM_EVENT_TYPE = 'beam_sdk_event';
 export enum ReceiveMessage {
   CONFIRMATION_WINDOW_READY = 'confirmation_window_ready',
 
+  REQUEST_CONNECTION_CONFIRMED = 'request_connection_confirmed',
+
   REQUEST_SESSION_CONFIRMED = 'request_session_confirmed',
   REQUEST_SESSION_ERROR = 'request_session_error',
   REQUEST_SESSION_REJECTED = 'request_session_rejected',
@@ -22,8 +24,12 @@ export type ConfirmationResult = {
   confirmed: boolean;
 };
 
-export type RequestConnectionResult = {
+export type RequestSignatureResult = {
   signature: string;
   address: Hex;
   ownerAddress: Hex;
+};
+
+export type RequestConnectionResult = {
+  address: Hex;
 };

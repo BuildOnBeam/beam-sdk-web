@@ -5,11 +5,11 @@ import './index.css';
 import { BeamClient, ClientConfig, ChainId } from '@onbeam/sdk';
 
 const config: ClientConfig = {
+  chainId: ChainId.BEAM_TESTNET,
   chains: [
     {
       id: ChainId.BEAM_TESTNET,
       publishableKey: import.meta.env.VITE_BEAM_PUBLISHABLE_KEY,
-      isPreview: true,
     },
   ],
   chainId: ChainId.BEAM_TESTNET,
