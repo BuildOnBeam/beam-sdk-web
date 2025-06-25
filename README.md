@@ -13,7 +13,7 @@ The Beam Web SDK is a Typescript library that allows you to easily integrate Bea
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Examples](#examples)
-- [Documentation](#online-documentation)
+- [Documentation](#documentation)
 
 # Getting Started
 
